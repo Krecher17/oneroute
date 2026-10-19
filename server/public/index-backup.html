@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17191d">
+<title>ONEROUTE | Convoy Control</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{--bg:#17191d;--card:#24272e;--line:#393e48;--text:#f5f3eb;--muted:#9ca3af;--yellow:#f4c430;--green:#42c786;--red:#f05b57;--orange:#f2a23a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding-bottom:85px}
+[hidden]{display:none!important}
+button,input{font:inherit}
+button{cursor:pointer;border:0;border-radius:11px;padding:12px 15px;font-weight:800;background:var(--yellow);color:#17191d}
+input{width:100%;padding:13px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:white}
+h1{font-size:29px;margin:8px 0}h2{font-size:17px;margin:0 0 12px}
+small,.muted,.eyebrow{color:var(--muted)}
+.eyebrow{text-transform:uppercase;letter-spacing:2px;font-size:10px;font-weight:800}
+.card{background:var(--card);border:1px solid #30343c;border-radius:16px;padding:16px;margin-bottom:13px}
+.brand{font-size:20px;font-weight:950;letter-spacing:2px;color:var(--yellow)}
+#setup{max-width:520px;margin:auto;padding:24px 17px}
+.hero{padding:15px 0 25px}
+.hero h1{font-size:42px;line-height:1.05}
+.hero p{color:var(--muted);line-height:1.6}
+.field-label{display:block;font-size:13px;font-weight:800;margin:12px 0 7px}
+.full{width:100%;margin-top:12px}
+.secondary{background:#343943;color:white}
+.search-row{display:flex;gap:7px}
+.search-row input{min-width:0}
+.results button{display:block;width:100%;text-align:left;background:#17191d;color:white;border:1px solid var(--line);margin-top:7px}
+.results button.selected{border-color:var(--yellow)}
+#msg{color:#ff9993;font-size:13px;min-height:22px;margin:12px 0}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:15px;background:#1d2025;border-bottom:1px solid var(--line);gap:10px}
+.live{font-size:11px;color:var(--green);font-weight:900}
+.screen{display:none;max-width:1000px;margin:auto;padding:16px}
+.screen.active{display:block}
+.subtitle{font-size:13px;color:var(--muted);line-height:1.5}
+#map{height:44vh;min-height:280px;width:100%;border-radius:16px;overflow:hidden}
+.map-wrap{position:relative;background:var(--card);border-radius:16px;border:1px solid var(--line);padding:5px}
+.map-tools{display:flex;gap:8px;position:absolute;z-index:2;bottom:14px;right:14px}
+.map-tools button{font-size:11px;padding:9px;background:#17191ded;color:white;border:1px solid #555}
+.map-tools button.active{background:var(--yellow);color:#17191d;border-color:var(--yellow)}
+.fuel-pin{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid var(--yellow);box-shadow:0 3px 12px #0009;font-size:17px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.metric{background:var(--card);border:1px solid #30343c;border-radius:13px;padding:12px 9px;min-width:0}
+.metric label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase}
+.metric strong{display:block;font-size:21px;margin-top:6px;overflow-wrap:anywhere}
+.metric small{font-size:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);font-size:13px}
+.row:first-child{border-top:0}
+.person{display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:#39331b;color:var(--yellow);font-weight:900}
+.status{font-size:10px;font-weight:850;border-radius:20px;padding:6px 8px;background:#343943;white-space:nowrap}
+.status.ok{color:#8ce4b4;background:#1d3b2c}
+.status.behind{color:#ffd18b;background:#47351f}
+.status.off{color:#ffaaa5;background:#482725}
+.code{font-size:30px;font-weight:950;letter-spacing:5px;color:var(--yellow);margin-top:5px}
+.code-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.notice{font-size:12px;line-height:1.6;color:#f7dfa0;background:#302b17;border:1px solid #5d4e1d;padding:13px;border-radius:12px}
+#banner{display:none;position:fixed;z-index:10;bottom:90px;left:4%;width:92%;background:#292d34;border:1px solid var(--line);border-left:5px solid var(--red);border-radius:12px;padding:14px;box-shadow:0 8px 30px #0008;font-size:13px}
+#banner b{display:block;margin-bottom:4px}
+#banner.ok{border-left-color:var(--green)}
+#banner.warn{border-left-color:var(--orange)}
+.pin{width:34px;height:34px;border:3px solid white;border-radius:50%;display:grid;place-items:center;font-weight:900;color:#17191d;box-shadow:0 3px 12px #0008}
+.pin.me{outline:3px solid var(--yellow)}
+.rejoin{background:white;color:#17191d;border:3px solid var(--red);padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900}
+.dest{background:#1b57a6;color:white;border:2px solid white;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900}
+.bottom-nav{position:fixed;z-index:20;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 7px calc(8px + env(safe-area-inset-bottom));background:#1d2025f5;border-top:1px solid var(--line)}
+.nav-btn{background:transparent;color:var(--muted);display:grid;gap:4px;justify-items:center;font-size:10px;padding:9px 2px}
+.nav-btn .ico{font-size:19px}
+.nav-btn.active{background:#39331b;color:var(--yellow);border-radius:10px}
+.waypoints-panel{margin-top:18px;background:#1d2025;border:1px solid var(--line);border-radius:18px;padding:16px}
+.waypoints-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.waypoints-heading h2{margin:0;font-size:17px;font-weight:950;letter-spacing:.04em}
+.waypoints-heading span{color:var(--yellow);font-size:12px;font-weight:900}
+.waypoint-card{display:flex;align-items:center;gap:12px;margin-top:10px;padding:13px;border:1px solid #30343c;border-radius:15px;background:#191c21}
+.waypoint-icon{flex:0 0 44px;height:44px;display:grid;place-items:center;border-radius:9px;background:#3949d8;color:white;font-size:22px;font-weight:950}
+.waypoint-info{flex:1;min-width:0}.waypoint-info strong{display:block;font-size:16px;line-height:1.35}.waypoint-info p{margin:5px 0 0;color:#b9c3d1;font-size:13px;line-height:1.45}
+.waypoint-distance{text-align:right;color:var(--yellow);font-size:22px;font-weight:950;white-space:nowrap}.waypoint-distance small{display:block;font-size:11px;color:#b9c3d1}
+#planner{min-height:100vh;padding:18px;background:var(--bg)}.planner-header{display:flex;align-items:center;gap:14px;max-width:1200px;margin:0 auto 18px}.planner-header h1{font-size:28px;margin:0 0 5px}
+.planner-layout{display:grid;grid-template-columns:minmax(280px,390px) minmax(0,1fr);gap:14px;max-width:1200px;margin:auto}#plannerMap{min-height:480px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+#plannerStops .row{align-items:center;gap:8px}#plannerStops .remove-stop{padding:7px 9px;background:#343943;color:white}#plannerMessage{min-height:20px;font-size:12px}
+@media(max-width:700px){#planner{padding:13px}.planner-layout{grid-template-columns:1fr}#plannerMap{min-height:330px}.waypoint-info strong{font-size:14px}.waypoint-distance{font-size:19px}}
+@media(min-width:760px){.screen{padding:24px}.hero h1{font-size:50px}.metrics{gap:12px}#map{height:52vh}}
+.speed-bubble{position:absolute;z-index:3;top:14px;left:14px;min-width:78px;padding:10px 12px;border:1px solid #ffffff30;border-radius:14px;background:#17191ded;color:#fff;box-shadow:0 4px 18px #0005;text-align:center;pointer-events:none}
+.speed-bubble strong{display:block;font-size:26px;line-height:1.1;color:var(--yellow)}.speed-bubble small{font-size:10px;color:#d1d5db;text-transform:uppercase;letter-spacing:1px}
+.quick-stop-menu{position:absolute;z-index:5;right:14px;bottom:62px;width:min(245px,calc(100% - 28px));padding:12px;border:1px solid var(--line);border-radius:14px;background:#1d2025f5;box-shadow:0 8px 28px #0008}
+.quick-stop-menu h3{margin:2px 0 10px;font-size:13px}.quick-stop-menu button{display:block;width:100%;margin-top:7px;text-align:left;background:#343943;color:white}.quick-stop-menu button:first-of-type{margin-top:0}.quick-stop-menu .close-stop{background:transparent;color:var(--muted);border:1px solid var(--line)}
+@media(max-width:480px){.map-tools{left:10px;right:10px;bottom:10px;flex-wrap:wrap}.map-tools button{padding:8px;font-size:10px}.speed-bubble{top:10px;left:10px}.quick-stop-menu{right:10px;bottom:58px}}
+
+
+/* ===== ONEROUTE UI EFFECTS: motion, depth, and live status ===== */
+:root{--glow:rgba(244,196,48,.22);--ease:cubic-bezier(.2,.8,.2,1)}
+html{scroll-behavior:smooth}
+body{background-image:radial-gradient(ellipse at 12% 0%,rgba(244,196,48,.055),transparent 34%),radial-gradient(ellipse at 95% 35%,rgba(66,199,134,.035),transparent 30%)}
+.card{position:relative;overflow:hidden;transition:transform .24s var(--ease),border-color .24s ease,box-shadow .24s ease;animation:cardEnter .55s var(--ease) both}
+.card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--yellow),transparent 85%);opacity:0;transition:opacity .25s ease}
+.card:hover{transform:translateY(-3px);border-color:#57503a;box-shadow:0 12px 30px rgba(0,0,0,.2),0 0 0 1px rgba(244,196,48,.04)}
+.card:hover::before{opacity:.9}
+.card:nth-of-type(2){animation-delay:.06s}.card:nth-of-type(3){animation-delay:.12s}.card:nth-of-type(4){animation-delay:.18s}
+button{position:relative;overflow:hidden;transition:transform .16s var(--ease),filter .2s ease,box-shadow .2s ease}
+button:hover{filter:brightness(1.08);box-shadow:0 5px 18px rgba(244,196,48,.13)}
+button:active{transform:scale(.97)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+input{transition:border-color .2s ease,box-shadow .2s ease,background .2s ease}
+input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);background:#1b1e23;outline:none}
+.brand{text-shadow:0 0 22px rgba(244,196,48,.16)}
+.hero h1{animation:heroEnter .7s var(--ease) both}
+.hero p{animation:heroEnter .7s .1s var(--ease) both}
+.live{display:inline-flex;align-items:center;gap:7px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(66,199,134,.55);animation:livePulse 1.8s infinite}
+#map{border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.2);animation:mapEnter .65s var(--ease) both}
+.results button{transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.results button:hover{transform:translateX(3px);background:#22262d;border-color:var(--yellow)}
+.bottom-nav,.topbar{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.bottom-nav{box-shadow:0 -8px 28px rgba(0,0,0,.2)}
+.nav-btn{transition:color .2s ease,background .2s ease,transform .2s ease}
+.nav-btn:hover{transform:translateY(-2px)}
+.nav-btn.active{box-shadow:inset 0 0 0 1px rgba(244,196,48,.13)}
+#banner{animation:bannerEnter .3s var(--ease) both;box-shadow:0 12px 35px rgba(0,0,0,.35)}
+.pin{transition:transform .2s ease,box-shadow .2s ease}
+.pin:hover{transform:scale(1.12);box-shadow:0 0 0 6px rgba(244,196,48,.16),0 4px 16px rgba(0,0,0,.4)}
+@keyframes cardEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes heroEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mapEnter{from{opacity:.65;transform:scale(.99)}to{opacity:1;transform:scale(1)}}
+@keyframes bannerEnter{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(66,199,134,.5)}70%{box-shadow:0 0 0 7px rgba(66,199,134,0)}100%{box-shadow:0 0 0 0 rgba(66,199,134,0)}}
+@media(hover:none){.card:hover{transform:none;box-shadow:none}.card:hover::before{opacity:0}button:hover{box-shadow:none;filter:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+</style>
+</head>
+<body>
+
+<section id="setup">
+  <div class="hero">
+    <div class="brand">⬡ ONEROUTE</div>
+    <p class="eyebrow">Convoy control system</p>
+    <h1>One route.<br><span style="color:var(--yellow)">One timing.</span><br>Together.</h1>
+    <p>Keep your people together on the road. See your convoy, spot missed turns and regroup.</p>
+  </div>
+  <div class="card">
+    <h2>Your driver profile</h2>
+    <label class="field-label" for="name">Your name</label>
+    <input id="name" maxlength="20" placeholder="Enter your name">
+  </div>
+  <div class="card">
+    <p class="eyebrow">Start a convoy</p>
+    <h2>Where are we heading?</h2>
+    <div class="search-row">
+      <input id="dest" placeholder="Search destination">
+      <button id="search">Search</button>
+    </div>
+    <div id="results" class="results"></div>
+    <button id="create" class="full">＋ Create trip</button>
+  </div>
+  <div class="card">
+    <p class="eyebrow">Join your people</p>
+    <h2>Already have a code?</h2>
+    <input id="code" maxlength="4" placeholder="4-letter trip code" style="text-transform:uppercase;letter-spacing:4px">
+    <button id="join" class="full secondary">Join trip →</button>
+  </div>
+  <div id="msg" role="status"></div>
+  <p class="subtitle">Your location is shared with your trip participants while sharing is active. Only join trips with people you trust.</p>
+</section>
+
+<section id="planner" hidden>
+  <header class="planner-header"><button id="backToSetup" class="secondary">← Back</button><div><h1>Plan your route</h1><small>Add fuel, food, rest or rally stops before sharing the trip.</small></div></header>
+  <div class="planner-layout"><div class="card"><p class="eyebrow">Destination</p><h2 id="plannerDestination">Selected destination</h2>
+    <label class="field-label" for="waypointSearch">Search for a waypoint</label><div class="search-row"><input id="waypointSearch" placeholder="Fuel station, rest stop, town…"><button id="searchWaypoint">Search</button></div>
+    <div id="waypointResults" class="results"></div><h2 style="margin-top:20px">Planned stops</h2><div id="plannerStops"></div><p id="plannerMessage" class="muted">Search for a place and add it to your route.</p><button id="startPlannedTrip" class="full">Confirm stops & start trip</button>
+  </div><div id="plannerMap"></div></div>
+</section>
+<div id="app" hidden>
+  <header class="topbar">
+    <div><div class="brand">⬡ ONEROUTE</div><small id="topdest">Convoy trip</small></div>
+    <div class="live">● LIVE</div>
+  </header>
+
+  <main>
+    <section id="screen-map" class="screen active">
+      <p class="eyebrow">Command center</p>
+      <h1>Live convoy</h1>
+      <p class="subtitle" id="destlabel">Everyone on the same route.</p>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="speed-bubble" aria-live="polite"><strong id="speedValue">--</strong><small>km/h</small></div>
+        <div class="map-tools">
+          <button id="recenter">⌖ Recenter</button>
+          <button id="follow">Follow: ON</button>
+          <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
+          <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+        </div>
+        <div id="quickStopMenu" class="quick-stop-menu" hidden>
+          <h3>Add a stop to your convoy route</h3>
+          <button data-stop-query="Fuel station">⛽ Fuel station</button>
+          <button data-stop-query="Restaurant">🍽️ Restaurant</button>
+          <button data-stop-query="Rest area">🛏️ Rest area</button>
+          <button id="closeQuickStop" class="close-stop">Cancel</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="memberCount">—</strong><small>In this trip</small></div>
+        <div class="metric"><label>Furthest gap</label><strong id="gap">—</strong><small>Distance behind</small></div>
+        <div class="metric"><label>On route</label><strong id="onroute">—</strong><small>Current status</small></div>
+      </div>
+      <section class="waypoints-panel">
+        <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
+        <div id="waypointsList"></div>
+        <p id="emptyWaypoints" class="subtitle">No stops added yet. Add stops when planning your route.</p>
+        <button id="editWaypoints" class="secondary full">Edit route & stops</button>
+      </section>
+      <div class="card">
+        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy">Copy</button></div>
+      </div>
+    </section>
+
+    <section id="screen-status" class="screen">
+      <p class="eyebrow">People & positions</p><h1>Trip status</h1>
+      <p class="subtitle">See who's moving with your group.</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="smembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="sonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="sgap">—</strong></div>
+      </div>
+      <div class="card" id="statuscars"><small>Waiting for updates…</small></div>
+      <div class="card"><h2>Location sharing</h2><p class="subtitle">Stop sharing to leave this session on this device.</p><button id="stop" style="background:#482725;color:#ffaaa5">Stop sharing & leave</button></div>
+    </section>
+
+    <section id="screen-chat" class="screen">
+      <p class="eyebrow">Coordinate together</p><h1>Convoy chat</h1>
+      <div class="card" style="text-align:center;padding:32px 18px">
+        <div style="font-size:38px;color:var(--yellow)">☏</div>
+        <h2>Chat integration needed</h2>
+        <p class="subtitle">Your current server does not relay chat messages yet. Add a Socket.IO chat event to enable messaging for everyone in this trip.</p>
+      </div>
+      <div class="notice">For safety, passengers should handle messages while the vehicle is moving.</div>
+    </section>
+
+    <section id="screen-summary" class="screen">
+      <p class="eyebrow">Trip overview</p><h1>Trip summary</h1>
+      <p class="subtitle" id="summarydest">Live session figures</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="umembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="uonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="ugap">—</strong></div>
+      </div>
+      <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
+      <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
+      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
+    </section>
+  </main>
+  <div id="banner" role="status" aria-live="polite"></div>
+</div>
+
+<nav id="nav" class="bottom-nav" hidden aria-label="Main navigation">
+  <button class="nav-btn active" data-screen="map"><span class="ico">⌖</span>MAP</button>
+  <button class="nav-btn" data-screen="status"><span class="ico">◎</span>STATUS</button>
+  <button class="nav-btn" data-screen="chat"><span class="ico">☏</span>CHAT</button>
+  <button class="nav-btn" data-screen="summary"><span class="ico">▤</span>SUMMARY</button>
+</nav>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const socket=io();
+const COLORS={ok:'#42c786',behind:'#f2a23a',off:'#f05b57',offline:'#9ca3af',arrived:'#6aa8ff'};
+const LABEL={ok:'On route',behind:'Behind',off:'Off route',offline:'No signal',arrived:'Arrived'};
+let chosen=null,session=null,map=null,watchId=null,wakeLock=null,follow=true,rejoinMarker=null,bannerTimer=null,pendingTrip=null,plannedWaypoints=[],plannerMap=null,plannerMarkers=[],lastGps=null,fuelVisible=false,fuelMarkers=[],fuelRequestId=0;
+const markers={};
+const name=()=>$('name').value.trim()||'Driver';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function setMsg(s){$('msg').textContent=s||''}
+function showBanner(html,kind='',ms=7000){
+  $('banner').innerHTML=html;$('banner').className=kind;$('banner').style.display='block';clearTimeout(bannerTimer);
+  if(ms)bannerTimer=setTimeout(()=>{$('banner').style.display='none';if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}},ms);
+}
+function geoError(e){
+  if(!window.isSecureContext&&location.hostname!=='localhost')return 'Location requires HTTPS. Open your secure tunnel link.';
+  if(e.code===1)return 'Location permission denied. Allow location in browser settings.';
+  if(e.code===2)return 'Could not get GPS. Try outside with GPS enabled.';
+  return 'Location timed out. Please try again.';
+}
+$('search').onclick=async()=>{
+  const q=$('dest').value.trim();if(!q)return setMsg('Enter a destination.');
+  setMsg('Searching…');$('results').innerHTML='';chosen=null;
+  try{
+    const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();
+    const list=await r.json();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
+    list.forEach(place=>{
+      const b=document.createElement('button');b.textContent=place.label;
+      b.onclick=()=>{chosen=place;[...$('results').children].forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
+      $('results').appendChild(b);
+    });
+  }catch{setMsg('Search failed. Check your internet and server.')}
+};
+$('dest').addEventListener('keydown',e=>{if(e.key==='Enter')$('search').click()});
+$('code').addEventListener('input',()=>{$('code').value=$('code').value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
+
+$('create').onclick=()=>{
+  if(!chosen)return setMsg('Search for a destination and select a result.');
+  if(!navigator.geolocation)return setMsg('This browser does not support GPS.');
+  setMsg('Getting your location…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    setMsg('Building route…');
+    socket.emit('create-trip',{name:name(),start:{lat:pos.coords.latitude,lon:pos.coords.longitude},destination:chosen},res=>{
+      if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.');
+    });
+  },e=>setMsg(geoError(e)),{enableHighAccuracy:true,timeout:15000});
+};
+$('join').onclick=()=>{
+  const code=$('code').value.trim().toUpperCase();if(code.length!==4)return setMsg('Enter the 4-letter trip code.');
+  socket.emit('join-trip',{code,name:name()},res=>{
+    if(res&&res.ok)startApp(res);else setMsg(res?.error||'Could not join this trip.');
+  });
+};
+
+
+function openPlanner(res){
+  pendingTrip=res;plannedWaypoints=Array.isArray(res.waypoints)?res.waypoints.slice():[];$('setup').hidden=true;$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;
+  $('plannerDestination').textContent=res.destination?.label||'Selected destination';$('plannerMessage').textContent='Search for a place and add it to your route.';$('waypointResults').replaceChildren();
+  if(plannerMap){plannerMap.remove();plannerMap=null}
+  plannerMap=new maplibregl.Map({container:'plannerMap',center:res.route?.[0]||[77.6,13],zoom:10,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});
+  plannerMap.addControl(new maplibregl.NavigationControl());plannerMap.on('load',drawPlannerRoute);renderPlannerStops();
+}
+function drawPlannerRoute(){
+  if(!plannerMap||!pendingTrip||!plannerMap.isStyleLoaded())return;const original=Array.isArray(pendingTrip.route)?pendingTrip.route:[];if(original.length<2)return;
+  const coords=[original[0],...plannedWaypoints.map(w=>[Number(w.lon),Number(w.lat)]),original[original.length-1]],feature={type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}};
+  if(plannerMap.getSource('planned-route'))plannerMap.getSource('planned-route').setData(feature);else{plannerMap.addSource('planned-route',{type:'geojson',data:feature});plannerMap.addLayer({id:'planned-route-line',type:'line',source:'planned-route',paint:{'line-color':'#f4c430','line-width':5},layout:{'line-cap':'round','line-join':'round'}})}
+  plannerMarkers.forEach(m=>m.remove());plannerMarkers=[];plannedWaypoints.forEach((w,i)=>{const el=document.createElement('div');el.className='waypoint-icon';el.textContent='P';plannerMarkers.push(new maplibregl.Marker({element:el}).setLngLat([Number(w.lon),Number(w.lat)]).setPopup(new maplibregl.Popup().setText(w.label||`Waypoint ${i+1}`)).addTo(plannerMap))});
+  const bounds=new maplibregl.LngLatBounds(coords[0],coords[0]);coords.forEach(c=>bounds.extend(c));plannerMap.fitBounds(bounds,{padding:45,duration:0});
+}
+function renderPlannerStops(){const list=$('plannerStops');list.replaceChildren();plannedWaypoints.forEach((w,i)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('span');label.textContent=`${i+1}. ${w.label||w.name||'Waypoint'}`;const b=document.createElement('button');b.className='remove-stop';b.textContent='Remove';b.onclick=()=>{plannedWaypoints.splice(i,1);renderPlannerStops();drawPlannerRoute()};row.append(label,b);list.appendChild(row)});if(!plannedWaypoints.length){const p=document.createElement('p');p.className='subtitle';p.textContent='No stops added yet.';list.appendChild(p)}}
+$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren();try{const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();const results=await r.json();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
+$('waypointSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchWaypoint').click()});
+$('backToSetup').onclick=()=>{$('planner').hidden=true;$('setup').hidden=false;if(plannerMap){plannerMap.remove();plannerMap=null}};
+$('editWaypoints').onclick=()=>{if(!pendingTrip){showBanner('<b>Route editing</b>Create a trip first to edit stops.','warn',5000);return}$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap.resize(),80)};
+$('startPlannedTrip').onclick=()=>{if(!pendingTrip)return;if(!plannedWaypoints.length){startApp({...pendingTrip,waypoints:[]});return}$('plannerMessage').textContent='Saving stops to the trip…';socket.emit('update-waypoints',{code:pendingTrip.code,waypoints:plannedWaypoints},res=>{if(!res||!res.ok){$('plannerMessage').textContent=res?.error||'Server support for saving waypoints is not installed yet. Add update-waypoints to index.js.';return}pendingTrip={...pendingTrip,...res,waypoints:res.waypoints||plannedWaypoints};startApp(pendingTrip)})};
+function renderUpcomingWaypoints(waypoints=[]){const list=$('waypointsList');list.replaceChildren();$('emptyWaypoints').hidden=waypoints.length>0;waypoints.forEach((w,i)=>{const card=document.createElement('div');card.className='waypoint-card';const icon=document.createElement('div');icon.className='waypoint-icon';icon.textContent='P';const info=document.createElement('div');info.className='waypoint-info';const title=document.createElement('strong');title.textContent=w.label||w.name||`Waypoint ${i+1}`;const detail=document.createElement('p');detail.textContent=w.description||(i===0?'Next planned stop':'Planned rally check');const distance=document.createElement('div');distance.className='waypoint-distance';const d=Number(w.distanceKm);distance.textContent=Number.isFinite(d)?d.toFixed(1):'—';const small=document.createElement('small');small.textContent=Number.isFinite(d)?'KM':'DISTANCE';distance.appendChild(small);info.append(title,detail);card.append(icon,info,distance);list.appendChild(card)})}
+socket.on('waypoints',waypoints=>{if(Array.isArray(waypoints)){plannedWaypoints=waypoints;renderUpcomingWaypoints(waypoints)}});
+socket.on('route-updated',update=>{
+  if(!update)return;
+  pendingTrip={...pendingTrip,...update};
+  plannedWaypoints=Array.isArray(update.waypoints)?update.waypoints:plannedWaypoints;
+  renderUpcomingWaypoints(plannedWaypoints);
+  if(map&&Array.isArray(update.route)&&update.route.length){
+    const feature={type:'Feature',geometry:{type:'LineString',coordinates:update.route},properties:{}};
+    if(map.getSource('route'))map.getSource('route').setData(feature);
+    else if(map.isStyleLoaded()){map.addSource('route',{type:'geojson',data:feature});map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#17191d','line-width':9}});map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':'#f4c430','line-width':5}});}
+    const bounds=update.route.reduce((b,c)=>b.extend(c),new maplibregl.LngLatBounds(update.route[0],update.route[0]));map.fitBounds(bounds,{padding:45,duration:0});
+  }
+});
+
+function startApp(res){
+  pendingTrip=res;
+  session={code:res.code,name:name()};
+  $('setup').hidden=true;$('app').hidden=false;$('nav').hidden=false;
+  $('tripcode').textContent=$('summarycode').textContent=res.code||'----';
+  const dest=(res.destination?.label)||'Destination';
+  $('topdest').textContent=dest.split(',').slice(0,2).join(',');
+  $('destlabel').textContent='→ '+dest;$('summarydest').textContent='Destination: '+dest;
+  $('destinationinfo').textContent=dest;
+  renderUpcomingWaypoints(res.waypoints||plannedWaypoints||[]);
+  if(map){map.remove();map=null}
+  Object.keys(markers).forEach(k=>delete markers[k]);
+  map=new maplibregl.Map({
+    container:'map',center:res.route?.[0]||[77.6,13],zoom:11,
+    style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}
+  });
+  map.addControl(new maplibregl.NavigationControl(),'top-right');
+  map.on('load',()=>{
+    if(res.route?.length){
+      map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:res.route}}});
+      map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#17191d','line-width':9}});
+      map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':'#f4c430','line-width':5}});
+      const bounds=res.route.reduce((b,c)=>b.extend(c),new maplibregl.LngLatBounds(res.route[0],res.route[0]));
+      map.fitBounds(bounds,{padding:45,duration:0});
+    }
+    if(res.destination){
+      const el=document.createElement('div');el.className='dest';el.textContent='Destination';
+      new maplibregl.Marker({element:el}).setLngLat([res.destination.lon,res.destination.lat]).addTo(map);
+    }
+  });
+  startSharing();showScreen('map');
+}
+function clearFuelMarkers(){fuelMarkers.forEach(marker=>marker.remove());fuelMarkers=[];}
+async function loadFuelStations(lat,lon){
+  if(!map||!fuelVisible)return;
+  const requestId=++fuelRequestId;
+  const query=`[out:json][timeout:20];(nwr(around:5000,${lat},${lon})[amenity=fuel];);out center tags;`;
+  try{
+    const response=await fetch('https://overpass-api.de/api/interpreter',{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(query)
+    });
+    if(!response.ok)throw new Error('Fuel station search failed');
+    const data=await response.json();
+    if(!fuelVisible||!map||requestId!==fuelRequestId)return;
+    clearFuelMarkers();
+    (data.elements||[]).forEach(station=>{
+      const stationLat=Number(station.lat??station.center?.lat);
+      const stationLon=Number(station.lon??station.center?.lon);
+      if(!Number.isFinite(stationLat)||!Number.isFinite(stationLon))return;
+      if(Math.abs(stationLat)>90||Math.abs(stationLon)>180)return;
+      const tags=station.tags||{};
+      const name=tags.name||tags.brand||'Fuel station';
+      const el=document.createElement('div');el.className='fuel-pin';el.textContent='⛽';el.title=name;
+      const popupContent=document.createElement('div');
+      const title=document.createElement('strong');title.textContent=name;popupContent.appendChild(title);
+      const addressParts=[tags['addr:street'],tags['addr:city']].filter(Boolean);
+      if(addressParts.length){const address=document.createElement('p');address.textContent=addressParts.join(', ');popupContent.appendChild(address);}
+      fuelMarkers.push(new maplibregl.Marker({element:el}).setLngLat([stationLon,stationLat]).setPopup(new maplibregl.Popup({offset:18}).setDOMContent(popupContent)).addTo(map));
+    });
+    showBanner(`<b>${fuelMarkers.length} fuel stations found</b>Within approximately 5 km. Tap a marker for details.`,'ok',4500);
+  }catch(e){
+    if(requestId===fuelRequestId&&fuelVisible)showBanner('<b>Fuel search failed</b>Check your internet connection and try again.','warn',5000);
+  }
+}
+$('fuelToggle').onclick=()=>{
+  fuelVisible=!fuelVisible;
+  const button=$('fuelToggle');button.classList.toggle('active',fuelVisible);button.setAttribute('aria-pressed',String(fuelVisible));
+  button.textContent=fuelVisible?'⛽ Hide fuel stations':'⛽ Fuel stations';
+  if(!fuelVisible){fuelRequestId++;clearFuelMarkers();return;}
+  if(lastGps)loadFuelStations(lastGps.lat,lastGps.lon);
+  else if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(position=>{
+      lastGps={lat:position.coords.latitude,lon:position.coords.longitude};
+      loadFuelStations(lastGps.lat,lastGps.lon);
+    },()=>showBanner('<b>Location unavailable</b>Allow GPS access and try again.','warn',5000),{enableHighAccuracy:true,timeout:12000});
+  }else showBanner('<b>GPS unavailable</b>This browser does not support location access.','warn',5000);
+};
+
+function startSharing(){
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  let last=0,lastFuelSearch=0;
+  watchId=navigator.geolocation.watchPosition(p=>{
+    if(Date.now()-last<1000)return;last=Date.now();
+    lastGps={lat:p.coords.latitude,lon:p.coords.longitude};
+    const speedMps=p.coords.speed;
+    $('speedValue').textContent=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):'--';
+    if(fuelVisible&&Date.now()-lastFuelSearch>30000){lastFuelSearch=Date.now();loadFuelStations(lastGps.lat,lastGps.lon)}
+    socket.emit('position',{lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy,speed:p.coords.speed});
+  },e=>showBanner('<b>Location problem</b>'+esc(geoError(e)),'warn',8000),{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  keepScreenOn();
+}
+async function keepScreenOn(){try{if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen')}catch{}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session)keepScreenOn()});
+
+function showScreen(which){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+which));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===which));
+  if(which==='map'&&map)setTimeout(()=>map.resize(),80);
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+$('follow').onclick=()=>{$('follow').textContent='Follow: '+((follow=!follow)?'ON':'OFF')};
+$('recenter').onclick=()=>{
+  if(!map)return;
+  const pts=Object.values(markers).map(m=>m.getLngLat());
+  if(pts.length){const b=new maplibregl.LngLatBounds(pts[0],pts[0]);pts.forEach(p=>b.extend(p));map.fitBounds(b,{padding:70,maxZoom:15})}
+};
+$('stop').onclick=()=>{
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  if(wakeLock)wakeLock.release().catch(()=>{});
+  socket.disconnect();location.reload();
+};
+socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
+
+socket.on('cars',cars=>{
+  if(!map||!Array.isArray(cars))return;
+  const bounds=new maplibregl.LngLatBounds(),seen=new Set();
+  $('statuscars').innerHTML='';
+  let on=0,maxGap=0;
+  cars.forEach(c=>{
+    seen.add(c.id);
+    if(['ok','behind','arrived'].includes(c.status))on++;
+    if(Number.isFinite(Number(c.gapKm)))maxGap=Math.max(maxGap,Number(c.gapKm));
+    if(Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))){
+      if(!markers[c.id]){
+        const el=document.createElement('div');el.className='pin'+(c.id===socket.id?' me':'');
+        el.textContent=String(c.name||'?')[0].toUpperCase();
+        markers[c.id]=new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).addTo(map);
+      }
+      markers[c.id].setLngLat([c.lon,c.lat]);
+      markers[c.id].getElement().style.background=COLORS[c.status]||COLORS.offline;
+      bounds.extend([c.lon,c.lat]);
+    }
+    const status=c.status||'offline',gap=Number(c.gapKm);
+    let detail=LABEL[status]||status;
+    if(Number.isFinite(gap)&&gap>0)detail=gap.toFixed(1)+' km behind';
+    if(c.etaMin!==null&&c.etaMin!==undefined)detail+=' · '+c.etaMin+' min';
+    const row=`<div class="row"><div class="person"><div class="avatar">${esc(String(c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name||'Driver')}${c.id===socket.id?' (you)':''}</b><br><small>${esc(detail)}</small></div></div><span class="status ${esc(status)}">${esc(LABEL[status]||status)}</span></div>`;
+    $('statuscars').insertAdjacentHTML('beforeend',row);
+  });
+  Object.keys(markers).forEach(id=>{if(!seen.has(id)){markers[id].remove();delete markers[id]}});
+  if(follow&&cars.length&&!bounds.isEmpty())map.fitBounds(bounds,{padding:100,maxZoom:15,duration:500});
+  $('memberCount').textContent=$('smembers').textContent=$('umembers').textContent=cars.length;
+  $('onroute').textContent=$('sonroute').textContent=$('uonroute').textContent=on;
+  $('gap').textContent=$('sgap').textContent=$('ugap').textContent=maxGap.toFixed(1)+' km';
+  if(!cars.length){$('statuscars').textContent='Waiting for convoy members…'}
+});
+
+socket.on('alert',a=>{
+  const who=a.id===socket.id?'You':esc(a.name||'A convoy member');
+  if(a.type==='missed-turn'){
+    const r=a.rejoin;
+    showBanner(`<b>${who} missed a turn</b>${Number(a.offMeters)||0} m off route.`+
+      (r?`<br>Suggested: ${esc(r.kind)} at km ${esc(r.km)}.`:''),'warn',10000);
+    if(rejoinMarker)rejoinMarker.remove();rejoinMarker=null;
+    if(r&&map&&Array.isArray(r.point)){
+      const el=document.createElement('div');el.className='rejoin';el.textContent='Rejoin here';
+      rejoinMarker=new maplibregl.Marker({element:el}).setLngLat(r.point).addTo(map);
+    }
+  }else if(a.type==='rejoined'){
+    showBanner(`<b>${who} is back on route</b>Convoy whole again.`,'ok',5000);
+    if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}
+  }else if(a.type==='gap'){
+    showBanner(`<b>${esc(a.name)} is ${esc(a.gapKm)} km behind</b>The convoy is spreading out.`,'warn',8000);
+  }
+});
+async function shareInvite(){
+  if(!session)return;
+  const url=new URL(location.href);url.searchParams.set('code',session.code);
+  const text=`Join my ONEROUTE convoy\nLink: ${url}\nCode: ${session.code}`;
+  try{
+    if(navigator.share)await navigator.share({title:'Join ONEROUTE',text,url:String(url)});
+    else{await navigator.clipboard.writeText(text);showBanner('<b>Invite copied</b>Send it to your group.','ok',4000)}
+  }catch(e){if(e.name!=='AbortError')window.prompt('Copy invite',text)}
+}
+$('share').onclick=shareInvite;
+$('copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText(session.code);showBanner('<b>Trip code copied</b>'+esc(session.code),'ok',3000)}
+  catch{window.prompt('Copy trip code',session.code)}
+};
+const invite=new URLSearchParams(location.search).get('code');
+if(invite)$('code').value=invite.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);
+$('quickStopToggle').onclick=()=>{
+  const menu=$('quickStopMenu');menu.hidden=!menu.hidden;
+  $('quickStopToggle').setAttribute('aria-expanded',String(!menu.hidden));
+};
+$('closeQuickStop').onclick=()=>{$('quickStopMenu').hidden=true;$('quickStopToggle').setAttribute('aria-expanded','false')};
+document.querySelectorAll('[data-stop-query]').forEach(button=>button.addEventListener('click',()=>{
+  const query=button.dataset.stopQuery;
+  $('quickStopMenu').hidden=true;$('quickStopToggle').setAttribute('aria-expanded','false');
+  if(!pendingTrip||!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  $('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;
+  if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap?.resize(),80);
+  $('waypointSearch').value=query;$('searchWaypoint').click();
+}));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@ljharb/tsconfig": "^0.3.2"
+  }
+}

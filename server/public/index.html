@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17191d">
+<title>ONEROUTE | Convoy Control</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{--bg:#17191d;--card:#24272e;--line:#393e48;--text:#f5f3eb;--muted:#9ca3af;--yellow:#f4c430;--green:#42c786;--red:#f05b57;--orange:#f2a23a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;padding-bottom:85px}
+[hidden]{display:none!important}
+button,input{font:inherit}
+button{cursor:pointer;border:0;border-radius:11px;padding:12px 15px;font-weight:800;background:var(--yellow);color:#17191d}
+input{width:100%;padding:13px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:white}
+h1{font-size:29px;margin:8px 0}h2{font-size:17px;margin:0 0 12px}
+small,.muted,.eyebrow{color:var(--muted)}
+.eyebrow{text-transform:uppercase;letter-spacing:2px;font-size:10px;font-weight:800}
+.card{background:var(--card);border:1px solid #30343c;border-radius:16px;padding:16px;margin-bottom:13px}
+.brand{font-size:20px;font-weight:950;letter-spacing:2px;color:var(--yellow)}
+#setup{max-width:520px;margin:auto;padding:24px 17px}
+.hero{padding:15px 0 25px}
+.hero h1{font-size:42px;line-height:1.05}
+.hero p{color:var(--muted);line-height:1.6}
+.field-label{display:block;font-size:13px;font-weight:800;margin:12px 0 7px}
+.full{width:100%;margin-top:12px}
+.secondary{background:#343943;color:white}
+.search-row{display:flex;gap:7px}
+.search-row input{min-width:0}
+.results button{display:block;width:100%;text-align:left;background:#17191d;color:white;border:1px solid var(--line);margin-top:7px}
+.results button.selected{border-color:var(--yellow)}
+#msg{color:#ff9993;font-size:13px;min-height:22px;margin:12px 0}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:15px;background:#1d2025;border-bottom:1px solid var(--line);gap:10px}
+.live{font-size:11px;color:var(--green);font-weight:900}
+.screen{display:none;max-width:1000px;margin:auto;padding:16px}
+.screen.active{display:block}
+.subtitle{font-size:13px;color:var(--muted);line-height:1.5}
+#map{height:44vh;min-height:280px;width:100%;border-radius:16px;overflow:hidden}
+.map-wrap{position:relative;background:var(--card);border-radius:16px;border:1px solid var(--line);padding:5px}
+.map-tools{display:flex;gap:8px;position:absolute;z-index:2;bottom:14px;right:14px}
+.map-tools button{font-size:11px;padding:9px;background:#17191ded;color:white;border:1px solid #555}
+.map-tools button.active{background:var(--yellow);color:#17191d;border-color:var(--yellow)}
+.fuel-pin{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid var(--yellow);box-shadow:0 3px 12px #0009;font-size:17px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.metric{background:var(--card);border:1px solid #30343c;border-radius:13px;padding:12px 9px;min-width:0}
+.metric label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase}
+.metric strong{display:block;font-size:21px;margin-top:6px;overflow-wrap:anywhere}
+.metric small{font-size:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);font-size:13px}
+.row:first-child{border-top:0}
+.person{display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:#39331b;color:var(--yellow);font-weight:900}
+.status{font-size:10px;font-weight:850;border-radius:20px;padding:6px 8px;background:#343943;white-space:nowrap}
+.status.ok{color:#8ce4b4;background:#1d3b2c}
+.status.behind{color:#ffd18b;background:#47351f}
+.status.off{color:#ffaaa5;background:#482725}
+.code{font-size:30px;font-weight:950;letter-spacing:5px;color:var(--yellow);margin-top:5px}
+.code-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.notice{font-size:12px;line-height:1.6;color:#f7dfa0;background:#302b17;border:1px solid #5d4e1d;padding:13px;border-radius:12px}
+#banner{display:none;position:fixed;z-index:10;bottom:90px;left:4%;width:92%;background:#292d34;border:1px solid var(--line);border-left:5px solid var(--red);border-radius:12px;padding:14px;box-shadow:0 8px 30px #0008;font-size:13px}
+#banner b{display:block;margin-bottom:4px}
+#banner.ok{border-left-color:var(--green)}
+#banner.warn{border-left-color:var(--orange)}
+.pin{width:34px;height:34px;border:3px solid white;border-radius:50%;display:grid;place-items:center;font-weight:900;color:#17191d;box-shadow:0 3px 12px #0008}
+.pin.me{outline:3px solid var(--yellow)}
+.rejoin{background:white;color:#17191d;border:3px solid var(--red);padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900}
+.dest{background:#1b57a6;color:white;border:2px solid white;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900}
+.bottom-nav{position:fixed;z-index:20;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 7px calc(8px + env(safe-area-inset-bottom));background:#1d2025f5;border-top:1px solid var(--line)}
+.nav-btn{background:transparent;color:var(--muted);display:grid;gap:4px;justify-items:center;font-size:10px;padding:9px 2px}
+.nav-btn .ico{font-size:19px}
+.nav-btn.active{background:#39331b;color:var(--yellow);border-radius:10px}
+.waypoints-panel{margin-top:18px;background:#1d2025;border:1px solid var(--line);border-radius:18px;padding:16px}
+.waypoints-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.waypoints-heading h2{margin:0;font-size:17px;font-weight:950;letter-spacing:.04em}
+.waypoints-heading span{color:var(--yellow);font-size:12px;font-weight:900}
+.waypoint-card{display:flex;align-items:center;gap:12px;margin-top:10px;padding:13px;border:1px solid #30343c;border-radius:15px;background:#191c21}
+.waypoint-icon{flex:0 0 44px;height:44px;display:grid;place-items:center;border-radius:9px;background:#3949d8;color:white;font-size:22px;font-weight:950}
+.waypoint-info{flex:1;min-width:0}.waypoint-info strong{display:block;font-size:16px;line-height:1.35}.waypoint-info p{margin:5px 0 0;color:#b9c3d1;font-size:13px;line-height:1.45}
+.waypoint-distance{text-align:right;color:var(--yellow);font-size:22px;font-weight:950;white-space:nowrap}.waypoint-distance small{display:block;font-size:11px;color:#b9c3d1}
+#planner{min-height:100vh;padding:18px;background:var(--bg)}.planner-header{display:flex;align-items:center;gap:14px;max-width:1200px;margin:0 auto 18px}.planner-header h1{font-size:28px;margin:0 0 5px}
+.planner-layout{display:grid;grid-template-columns:minmax(280px,390px) minmax(0,1fr);gap:14px;max-width:1200px;margin:auto}#plannerMap{min-height:480px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+#plannerStops .row{align-items:center;gap:8px}#plannerStops .remove-stop{padding:7px 9px;background:#343943;color:white}#plannerMessage{min-height:20px;font-size:12px}
+@media(max-width:700px){#planner{padding:13px}.planner-layout{grid-template-columns:1fr}#plannerMap{min-height:330px}.waypoint-info strong{font-size:14px}.waypoint-distance{font-size:19px}}
+@media(min-width:760px){.screen{padding:24px}.hero h1{font-size:50px}.metrics{gap:12px}#map{height:52vh}}
+.speed-bubble{position:absolute;z-index:3;top:14px;left:14px;min-width:78px;padding:10px 12px;border:1px solid #ffffff30;border-radius:14px;background:#17191ded;color:#fff;box-shadow:0 4px 18px #0005;text-align:center;pointer-events:none}
+.speed-bubble strong{display:block;font-size:26px;line-height:1.1;color:var(--yellow)}.speed-bubble small{font-size:10px;color:#d1d5db;text-transform:uppercase;letter-spacing:1px}
+.quick-stop-menu{position:absolute;z-index:5;right:14px;bottom:62px;width:min(245px,calc(100% - 28px));padding:12px;border:1px solid var(--line);border-radius:14px;background:#1d2025f5;box-shadow:0 8px 28px #0008}
+.quick-stop-menu h3{margin:2px 0 10px;font-size:13px}.quick-stop-menu button{display:block;width:100%;margin-top:7px;text-align:left;background:#343943;color:white}.quick-stop-menu button:first-of-type{margin-top:0}.quick-stop-menu .close-stop{background:transparent;color:var(--muted);border:1px solid var(--line)}
+@media(max-width:480px){.map-tools{left:10px;right:10px;bottom:10px;flex-wrap:wrap}.map-tools button{padding:8px;font-size:10px}.speed-bubble{top:10px;left:10px}.quick-stop-menu{right:10px;bottom:58px}}
+
+
+/* ===== ONEROUTE UI EFFECTS: motion, depth, and live status ===== */
+:root{--glow:rgba(244,196,48,.22);--ease:cubic-bezier(.2,.8,.2,1)}
+html{scroll-behavior:smooth}
+body{background-image:radial-gradient(ellipse at 12% 0%,rgba(244,196,48,.055),transparent 34%),radial-gradient(ellipse at 95% 35%,rgba(66,199,134,.035),transparent 30%)}
+.card{position:relative;overflow:hidden;transition:transform .24s var(--ease),border-color .24s ease,box-shadow .24s ease;animation:cardEnter .55s var(--ease) both}
+.card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--yellow),transparent 85%);opacity:0;transition:opacity .25s ease}
+.card:hover{transform:translateY(-3px);border-color:#57503a;box-shadow:0 12px 30px rgba(0,0,0,.2),0 0 0 1px rgba(244,196,48,.04)}
+.card:hover::before{opacity:.9}
+.card:nth-of-type(2){animation-delay:.06s}.card:nth-of-type(3){animation-delay:.12s}.card:nth-of-type(4){animation-delay:.18s}
+button{position:relative;overflow:hidden;transition:transform .16s var(--ease),filter .2s ease,box-shadow .2s ease}
+button:hover{filter:brightness(1.08);box-shadow:0 5px 18px rgba(244,196,48,.13)}
+button:active{transform:scale(.97)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+input{transition:border-color .2s ease,box-shadow .2s ease,background .2s ease}
+input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);background:#1b1e23;outline:none}
+.brand{text-shadow:0 0 22px rgba(244,196,48,.16)}
+.hero h1{animation:heroEnter .7s var(--ease) both}
+.hero p{animation:heroEnter .7s .1s var(--ease) both}
+.live{display:inline-flex;align-items:center;gap:7px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(66,199,134,.55);animation:livePulse 1.8s infinite}
+#map{border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.2);animation:mapEnter .65s var(--ease) both}
+.results button{transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.results button:hover{transform:translateX(3px);background:#22262d;border-color:var(--yellow)}
+.bottom-nav,.topbar{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.bottom-nav{box-shadow:0 -8px 28px rgba(0,0,0,.2)}
+.nav-btn{transition:color .2s ease,background .2s ease,transform .2s ease}
+.nav-btn:hover{transform:translateY(-2px)}
+.nav-btn.active{box-shadow:inset 0 0 0 1px rgba(244,196,48,.13)}
+#banner{animation:bannerEnter .3s var(--ease) both;box-shadow:0 12px 35px rgba(0,0,0,.35)}
+.pin{transition:transform .2s ease,box-shadow .2s ease}
+.pin:hover{transform:scale(1.12);box-shadow:0 0 0 6px rgba(244,196,48,.16),0 4px 16px rgba(0,0,0,.4)}
+@keyframes cardEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes heroEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mapEnter{from{opacity:.65;transform:scale(.99)}to{opacity:1;transform:scale(1)}}
+@keyframes bannerEnter{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(66,199,134,.5)}70%{box-shadow:0 0 0 7px rgba(66,199,134,0)}100%{box-shadow:0 0 0 0 rgba(66,199,134,0)}}
+@media(hover:none){.card:hover{transform:none;box-shadow:none}.card:hover::before{opacity:0}button:hover{box-shadow:none;filter:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Full-screen turn-by-turn convoy navigation */
+#navigationScreen{position:fixed;inset:0;z-index:1000;background:#101216;color:#f5f3eb;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+#navigationScreen[hidden]{display:none!important}.navtop{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#1d2025;border-bottom:1px solid #393e48;z-index:3}.navtop .brand{font-size:16px;white-space:nowrap}.navtop .navdest{min-width:0;flex:1}.navdest strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.navdest small{font-size:11px}.navtop button{padding:9px 12px;white-space:nowrap}.nav-turn{display:flex;align-items:center;gap:14px;background:#f4c430;color:#17191d;padding:14px 16px;z-index:2;box-shadow:0 6px 20px #0005}.turn-icon{font-size:35px;font-weight:950;line-height:1;min-width:42px;text-align:center}.turn-copy{min-width:0;flex:1}.turn-copy small{display:block;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;opacity:.75}.turn-copy strong{display:block;font-size:19px;line-height:1.2;margin-top:3px}.turn-copy span{display:block;font-size:12px;margin-top:4px}.turn-distance{font-size:20px;font-weight:950;white-space:nowrap}.turn-distance small{display:block;font-size:10px;text-align:right}.nav-map-area{position:relative;flex:1;min-height:180px}#navMap{position:absolute;inset:0}.nav-map-badge{position:absolute;top:12px;left:12px;z-index:2;background:#17191de8;border:1px solid #ffffff25;border-radius:10px;padding:8px 10px;font-size:11px}.nav-map-badge b{color:var(--yellow)}.nav-bottom{max-height:33vh;overflow:auto;background:#1d2025;border-top:1px solid #393e48;padding:12px 14px calc(14px + env(safe-area-inset-bottom));}.nav-bottom-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.nav-bottom-head strong{font-size:13px}.nav-bottom-head span{font-size:11px;color:var(--muted)}.nav-convoy{display:flex;gap:8px;overflow-x:auto;padding:2px 0 9px}.nav-person{flex:0 0 auto;min-width:104px;border:1px solid #393e48;background:#252a32;border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:8px;color:white;text-align:left}.nav-person .mini-avatar{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;font-size:12px;font-weight:950;color:#17191d;flex-shrink:0}.nav-person b{display:block;font-size:11px;max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nav-person small{display:block;font-size:10px;color:#b8c0cc}.nav-person.me{border-color:var(--yellow)}.nav-next-list{display:flex;gap:8px;overflow:auto;padding-top:4px}.nav-step-chip{flex:0 0 auto;max-width:210px;border:1px solid #393e48;border-radius:10px;padding:8px 10px;font-size:11px;color:#d7dbe2}.nav-step-chip b{color:var(--yellow);margin-right:5px}.nav-note{font-size:11px;color:#aeb6c4;margin-top:8px;line-height:1.4}.nav-pin{width:30px;height:30px;border:2px solid #fff;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:950;color:#17191d;box-shadow:0 3px 12px #0009}.nav-pin.me{outline:3px solid var(--yellow)}
+@media(min-width:800px){.nav-bottom{max-height:27vh}.nav-turn{padding:18px 24px}.turn-copy strong{font-size:24px}}
+@media(max-width:480px){.navtop{gap:8px;padding:10px}.navtop .brand{font-size:13px}.navtop button{padding:9px;font-size:12px}.turn-icon{font-size:29px;min-width:32px}.turn-copy strong{font-size:17px}.turn-distance{font-size:17px}.nav-bottom{max-height:37vh}}
+
+
+/* Voice message controls */
+.voice-console{background:#202329;border:1px solid #454b56;border-radius:15px;padding:15px;margin:14px 0;color:var(--text)}
+.voice-console h2{margin:0 0 6px}.voice-console p{font-size:12px;color:var(--muted);line-height:1.5;margin:5px 0 12px}
+.voice-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.voice-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:170px;background:var(--yellow);color:#17191d;padding:13px 16px;border-radius:12px;font-weight:900}
+.voice-button.recording{background:#dc4545;color:#fff;animation:voicePulse 1.2s infinite}
+.voice-button-icon{font-size:18px}.voice-timer{font-variant-numeric:tabular-nums;font-weight:900;font-size:18px;color:var(--yellow)}
+.voice-status{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:12px;color:#b8c0cc;min-height:18px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#89919e;flex:0 0 8px}.voice-status.recording .status-dot{background:#f05252;box-shadow:0 0 0 4px #f0525226}.voice-status.success .status-dot{background:var(--green)}.voice-status.sending .status-dot{background:var(--yellow)}
+.voice-messages{display:grid;gap:10px;margin-top:12px}.voice-message{border:1px solid #3a404a;border-radius:12px;padding:12px;background:#191c21}.voice-message strong{display:block;font-size:13px}.voice-message small{display:block;color:var(--muted);font-size:11px;margin:4px 0 8px}.voice-message audio{display:block;width:100%;height:38px}
+@keyframes voicePulse{0%,100%{box-shadow:0 0 0 0 #dc454555}50%{box-shadow:0 0 0 7px #dc454500}}
+
+
+/* ===== Extra hover interactions: buttons, cards, map tools and voice controls ===== */
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .metric,.waypoints-panel,.waypoint-card,.voice-console,.voice-message,.quick-stop-menu,.nav-person,.nav-step-chip,.map-wrap{
+    transition:transform .22s var(--ease),border-color .22s ease,box-shadow .22s ease,background-color .22s ease;
+  }
+  .metric:hover{transform:translateY(-4px);border-color:rgba(244,196,48,.48);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+  .waypoints-panel:hover,.voice-console:hover{border-color:rgba(244,196,48,.4);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+  .waypoint-card:hover,.voice-message:hover{transform:translateY(-3px);border-color:rgba(244,196,48,.48);background:#20242b;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+  .map-wrap:hover{border-color:#57503a;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+  .map-tools button:hover,.quick-stop-menu button:hover,.navtop button:hover{transform:translateY(-3px) scale(1.025);border-color:var(--yellow);background:#34302a;color:#fff;box-shadow:0 7px 18px rgba(244,196,48,.18)}
+  .nav-person:hover,.nav-step-chip:hover{transform:translateY(-3px);border-color:var(--yellow);background:#30333a;box-shadow:0 7px 18px rgba(0,0,0,.22)}
+  .voice-button:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 8px 24px rgba(244,196,48,.25);filter:brightness(1.06)}
+  .voice-button.recording:hover{background:#f05252;box-shadow:0 8px 24px rgba(240,82,82,.24)}
+  .avatar:hover,.waypoint-icon:hover{transform:rotate(-4deg) scale(1.06);transition:transform .2s var(--ease)}
+  .brand{transition:text-shadow .25s ease,color .25s ease}
+  .brand:hover{text-shadow:0 0 25px rgba(244,196,48,.42)}
+}
+@media (hover:none){.metric:hover,.waypoints-panel:hover,.waypoint-card:hover,.voice-console:hover,.voice-message:hover,.map-wrap:hover,.map-tools button:hover,.quick-stop-menu button:hover,.navtop button:hover,.nav-person:hover,.nav-step-chip:hover,.voice-button:hover{transform:none}}
+
+
+
+/* ONEROUTE motion pass: gentle, purposeful motion */
+:root{--motion-ease:cubic-bezier(.2,.75,.25,1)}
+body{animation:pageFadeIn .55s var(--motion-ease) both}
+.hero,.setup-card,.panel,.metric,.waypoints-panel,.voice-console{animation:contentRise .55s var(--motion-ease) both}
+.hero{animation-delay:.04s}.setup-card{animation-delay:.08s}.metric:nth-child(2){animation-delay:.06s}.metric:nth-child(3){animation-delay:.12s}
+.map-wrap{transform-origin:center;animation:mapReveal .65s var(--motion-ease) both}
+.bottom-nav{animation:navRise .45s .15s var(--motion-ease) both}
+.bottom-nav .nav-btn .nav-icon,.nav-btn svg{transition:transform .25s var(--motion-ease),filter .25s ease}
+.bottom-nav .nav-btn:hover .nav-icon,.nav-btn:hover svg{transform:translateY(-2px) scale(1.12);filter:drop-shadow(0 0 6px rgba(244,196,48,.35))}
+button,.button,.nav-btn,.metric,.waypoint-card,.voice-console,.voice-message,.nav-person,.nav-step-chip{transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease,background-color .22s ease,filter .22s ease}
+button:active,.button:active,.nav-btn:active{transform:scale(.97)}
+#banner{animation:bannerSlide .35s var(--motion-ease) both}
+.pin{animation:pinPop .35s var(--motion-ease) both}
+.voice-button.recording{animation:recordGlow 1.35s ease-in-out infinite}
+#navigationScreen:not([hidden]) .nav-turn{animation:turnCardIn .35s var(--motion-ease) both}
+#navigationScreen:not([hidden]) .navtop{animation:navRise .3s var(--motion-ease) both}
+#navigationScreen:not([hidden]) .nav-step-chip{animation:contentRise .35s var(--motion-ease) both}
+@keyframes pageFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes contentRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mapReveal{from{opacity:.65;transform:scale(.985)}to{opacity:1;transform:scale(1)}}
+@keyframes navRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bannerSlide{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes pinPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+@keyframes turnCardIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes recordGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,82,82,.18)}50%{box-shadow:0 0 0 7px rgba(240,82,82,0)}}
+@media(prefers-reduced-motion:reduce){body,.hero,.setup-card,.panel,.metric,.waypoints-panel,.voice-console,.map-wrap,.bottom-nav,#banner,.pin,#navigationScreen:not([hidden]) .nav-turn,#navigationScreen:not([hidden]) .navtop,#navigationScreen:not([hidden]) .nav-step-chip{animation:none!important}button,.button,.nav-btn,.metric,.waypoint-card,.voice-console,.voice-message,.nav-person,.nav-step-chip{transition:none!important}}
+
+
+/* ===== NEW EFFECTS ===== */
+
+/* Map markers: MapLibre positions each marker with an inline transform, so CSS
+   animations/transitions that touch `transform` on the marker element itself
+   would fight it. Marker effects below use pseudo-elements and the separate
+   `translate` property instead. */
+.pin{animation:none!important;transition:box-shadow .2s ease}
+.pin:hover{transform:none;box-shadow:0 0 0 6px rgba(244,196,48,.16),0 4px 16px rgba(0,0,0,.4)}
+
+/* 1. Ripple ring on your own pin and on any off-route pin */
+.pin.me::after,.pin.alert::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--yellow);pointer-events:none;animation:ripple 1.8s ease-out infinite}
+.pin.alert::after{border-color:var(--red);animation-duration:1.2s}
+@keyframes ripple{from{transform:scale(1);opacity:.85}to{transform:scale(2.5);opacity:0}}
+
+/* 2. Bouncing "Rejoin here" tag (uses `translate`, not `transform`) */
+.rejoin{animation:bob 1s ease-in-out infinite}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 -6px}}
+
+/* 3. Shimmer on the hero highlight text */
+.hero h1 span{background:linear-gradient(90deg,#f4c430,#fff3b0,#f4c430);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important;animation:shine 3s linear infinite}
+@keyframes shine{to{background-position:200% center}}
+
+/* 6. Screen transitions */
+.screen.active{animation:screenIn .35s var(--motion-ease) both}
+@keyframes screenIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+
+@media(prefers-reduced-motion:reduce){
+  .pin.me::after,.pin.alert::after{animation:none;opacity:.5;transform:scale(1.4)}
+  .rejoin,.hero h1 span,.screen.active{animation:none!important}
+}
+
+</style>
+</head>
+<body>
+
+<section id="setup">
+  <div class="hero">
+    <div class="brand">⬡ ONEROUTE</div>
+    <p class="eyebrow">Convoy control system</p>
+    <h1>One route.<br><span style="color:var(--yellow)">One timing.</span><br>Together.</h1>
+    <p>Keep your people together on the road. See your convoy, spot missed turns and regroup.</p>
+  </div>
+  <div class="card">
+    <h2>Your driver profile</h2>
+    <label class="field-label" for="name">Your name</label>
+    <input id="name" maxlength="20" placeholder="Enter your name">
+  </div>
+  <div class="card">
+    <p class="eyebrow">Start a convoy</p>
+    <h2>Where are we heading?</h2>
+    <div class="search-row">
+      <input id="dest" placeholder="Search destination">
+      <button id="search">Search</button>
+    </div>
+    <div id="results" class="results"></div>
+    <button id="create" class="full">＋ Create trip</button>
+  </div>
+  <div class="card">
+    <p class="eyebrow">Join your people</p>
+    <h2>Already have a code?</h2>
+    <input id="code" maxlength="4" placeholder="4-letter trip code" style="text-transform:uppercase;letter-spacing:4px">
+    <button id="join" class="full secondary">Join trip →</button>
+  </div>
+  <div id="msg" role="status"></div>
+  <p class="subtitle">Your location is shared with your trip participants while sharing is active. Only join trips with people you trust.</p>
+</section>
+
+<section id="planner" hidden>
+  <header class="planner-header"><button id="backToSetup" class="secondary">← Back</button><div><h1>Plan your route</h1><small>Add fuel, food, rest or rally stops before sharing the trip.</small></div></header>
+  <div class="planner-layout"><div class="card"><p class="eyebrow">Destination</p><h2 id="plannerDestination">Selected destination</h2>
+    <label class="field-label" for="waypointSearch">Search for a waypoint</label><div class="search-row"><input id="waypointSearch" placeholder="Fuel station, rest stop, town…"><button id="searchWaypoint">Search</button></div>
+    <div id="waypointResults" class="results"></div><h2 style="margin-top:20px">Planned stops</h2><div id="plannerStops"></div><p id="plannerMessage" class="muted">Search for a place and add it to your route.</p><button id="startPlannedTrip" class="full">Confirm stops & start trip</button>
+  </div><div id="plannerMap"></div></div>
+</section>
+<div id="app" hidden>
+  <header class="topbar">
+    <div><div class="brand">⬡ ONEROUTE</div><small id="topdest">Convoy trip</small></div>
+    <div class="live">● LIVE</div>
+  </header>
+
+  <main>
+    <section id="screen-map" class="screen active">
+      <p class="eyebrow">Command center</p>
+      <h1>Live convoy</h1>
+      <p class="subtitle" id="destlabel">Everyone on the same route.</p>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="speed-bubble" aria-live="polite"><strong id="speedValue">--</strong><small>km/h</small></div>
+        <div class="map-tools">
+          <button id="openNavigation">➤ Navigation</button>
+          <button id="recenter">⌖ Recenter</button>
+          <button id="follow">Follow: ON</button>
+          <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
+          <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+        </div>
+        <div id="quickStopMenu" class="quick-stop-menu" hidden>
+          <h3>Add a stop to your convoy route</h3>
+          <button data-stop-query="Fuel station">⛽ Fuel station</button>
+          <button data-stop-query="Restaurant">🍽️ Restaurant</button>
+          <button data-stop-query="Rest area">🛏️ Rest area</button>
+          <button id="closeQuickStop" class="close-stop">Cancel</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="memberCount">—</strong><small>In this trip</small></div>
+        <div class="metric"><label>Furthest gap</label><strong id="gap">—</strong><small>Distance behind</small></div>
+        <div class="metric"><label>On route</label><strong id="onroute">—</strong><small>Current status</small></div>
+      </div>
+      <section class="voice-console" id="mapVoiceConsole">
+        <h2>🎙️ Convoy voice messages</h2>
+        <p>Record a short audio message and send it to everyone in your convoy. Tap again to stop recording.</p>
+        <div class="voice-controls"><button type="button" id="mapTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Start recording</span></button><span id="mapTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="mapTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Ready when you are</span></div>
+        <div id="voiceMessages" class="voice-messages" aria-live="polite"></div>
+      </section>
+      <section class="waypoints-panel">
+        <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
+        <div id="waypointsList"></div>
+        <p id="emptyWaypoints" class="subtitle">No stops added yet. Add stops when planning your route.</p>
+        <button id="editWaypoints" class="secondary full">Edit route & stops</button>
+      </section>
+      <div class="card">
+        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy">Copy</button></div>
+      </div>
+    </section>
+
+    <section id="screen-status" class="screen">
+      <p class="eyebrow">People & positions</p><h1>Trip status</h1>
+      <p class="subtitle">See who's moving with your group.</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="smembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="sonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="sgap">—</strong></div>
+      </div>
+      <div class="card" id="statuscars"><small>Waiting for updates…</small></div>
+      <div class="card"><h2>Location sharing</h2><p class="subtitle">Stop sharing to leave this session on this device.</p><button id="stop" style="background:#482725;color:#ffaaa5">Stop sharing & leave</button></div>
+    </section>
+
+    <section id="screen-chat" class="screen">
+      <p class="eyebrow">Coordinate together</p><h1>Convoy chat</h1>
+      <section class="voice-console" id="chatVoiceConsole">
+        <h2>🎙️ Voice chat</h2>
+        <p>Send an audio message to the convoy. Allow microphone access when your browser asks.</p>
+        <div class="voice-controls"><button type="button" id="chatTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Start recording</span></button><span id="chatTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="chatTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Ready when you are</span></div>
+      </section>
+      <div class="card"><h2>Received voice messages</h2><p class="subtitle">Audio messages received from convoy members appear in the voice message list on the Map tab.</p></div>
+      <div class="notice">For safety, passengers should handle messages while the vehicle is moving.</div>
+    </section>
+
+    <section id="screen-summary" class="screen">
+      <p class="eyebrow">Trip overview</p><h1>Trip summary</h1>
+      <p class="subtitle" id="summarydest">Live session figures</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="umembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="uonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="ugap">—</strong></div>
+      </div>
+      <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
+      <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
+      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
+    </section>
+  </main>
+  <div id="banner" role="status" aria-live="polite"></div>
+</div>
+
+<section id="navigationScreen" hidden aria-label="Full-screen navigation">
+  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="closeNavigation" class="secondary">✕ Exit</button></header>
+  <div class="nav-turn" aria-live="polite"><div class="turn-icon" id="navTurnIcon">↑</div><div class="turn-copy"><small id="navTurnLabel">NEXT MANEUVER</small><strong id="navInstruction">Finding your route…</strong><span id="navRoadName">Keep the convoy together</span></div><div class="turn-distance" id="navTurnDistance">—<small>TO TURN</small></div></div>
+  <div class="nav-map-area"><div id="navMap"></div><div class="nav-map-badge">● <b id="navLiveCount">0 vehicles</b> · live convoy positions</div></div>
+  <div class="nav-bottom"><div class="nav-bottom-head"><strong>Convoy locations</strong><span>Tap a driver to focus map</span></div><div id="navConvoy" class="nav-convoy"></div><div class="nav-bottom-head" style="margin-top:4px"><strong>Upcoming directions</strong><span id="navStepsCount">Turn-by-turn</span></div><div id="navNextSteps" class="nav-next-list"></div><div class="nav-note" id="navNotice">Directions use the Open Source Routing Machine public demo service. Keep your eyes on the road and follow road signs.</div></div>
+</section>
+
+<nav id="nav" class="bottom-nav" hidden aria-label="Main navigation">
+  <button class="nav-btn active" data-screen="map"><span class="ico">⌖</span>MAP</button>
+  <button class="nav-btn" data-screen="status"><span class="ico">◎</span>STATUS</button>
+  <button class="nav-btn" data-screen="chat"><span class="ico">☏</span>CHAT</button>
+  <button class="nav-btn" data-screen="summary"><span class="ico">▤</span>SUMMARY</button>
+</nav>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+'use strict';
+const $=id=>document.getElementById(id);
+const socket=io();
+const COLORS={ok:'#42c786',behind:'#f2a23a',off:'#f05b57',offline:'#9ca3af',arrived:'#6aa8ff'};
+const LABEL={ok:'On route',behind:'Behind',off:'Off route',offline:'No signal',arrived:'Arrived'};
+let chosen=null,session=null,map=null,watchId=null,wakeLock=null,follow=true,rejoinMarker=null,bannerTimer=null,pendingTrip=null,plannedWaypoints=[],plannerMap=null,plannerMarkers=[],lastGps=null,fuelVisible=false,fuelMarkers=[],fuelRequestId=0;
+let navMap=null,navMarkers={},navRouteSteps=[],navStepIndex=0,navCars=[],navRouteCoords=[],navRouteRequest=0,navOpen=false,navLastRouteAt=0;
+const markers={};
+
+// ===== NEW: motion helpers =====
+const REDUCED=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const glides=new Map();
+// Smoothly glide a MapLibre marker to a new [lon,lat] instead of jumping.
+function glideMarker(key,marker,to,ms=700){
+  const from=marker.getLngLat();
+  cancelAnimationFrame(glides.get(key));
+  const dx=to[0]-from.lng,dy=to[1]-from.lat;
+  // Snap when reduced motion is on, nothing changed, or the jump is huge (teleport / reconnect).
+  if(REDUCED||(Math.abs(dx)<1e-7&&Math.abs(dy)<1e-7)||Math.abs(dx)>0.05||Math.abs(dy)>0.05){marker.setLngLat(to);return}
+  const t0=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/ms),e=1-Math.pow(1-p,3);
+    marker.setLngLat([from.lng+dx*e,from.lat+dy*e]);
+    if(p<1)glides.set(key,requestAnimationFrame(step));
+  };
+  glides.set(key,requestAnimationFrame(step));
+}
+// Count a number up/down to its new value.
+function animateNumber(el,to,decimals=0,suffix=''){
+  if(!el)return;
+  const from=Number(el._v);el._v=to;
+  cancelAnimationFrame(el._raf);
+  if(REDUCED||!Number.isFinite(from)||from===to){el.textContent=to.toFixed(decimals)+suffix;return}
+  const t0=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/500),e=1-Math.pow(1-p,3);
+    el.textContent=(from+(to-from)*e).toFixed(decimals)+suffix;
+    if(p<1)el._raf=requestAnimationFrame(step);
+  };
+  el._raf=requestAnimationFrame(step);
+}
+
+// Voice messages: short audio recordings are relayed by the server to this trip.
+let voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceRecording=false,voiceTimer=null,voiceClockInterval=null,voiceStartedAt=0;
+const MAX_VOICE_MS=30000, MAX_AUDIO_BYTES=700000;
+function setVoiceStatus(message){
+  ['mapTalkStatus','chatTalkStatus'].forEach(id=>{const el=$(id);if(!el)return;el.className='voice-status';const text=String(message||'');if(/recording/i.test(text))el.classList.add('recording');else if(/sending|prepar/i.test(text))el.classList.add('sending');else if(/sent/i.test(text))el.classList.add('success');el.replaceChildren();const dot=document.createElement('span');dot.className='status-dot';const label=document.createElement('span');label.textContent=text||'Ready when you are';el.append(dot,label)});
+}
+function updateVoiceClock(){const elapsed=Math.min(MAX_VOICE_MS,Math.max(0,Date.now()-voiceStartedAt));const value=Math.floor(elapsed/1000);const formatted='00:'+String(value).padStart(2,'0');['mapTalkTimer','chatTalkTimer'].forEach(id=>{const el=$(id);if(el)el.textContent=formatted})}
+function setVoiceButtons(recording){
+  voiceRecording=recording;
+  ['mapTalkButton','chatTalkButton'].forEach(id=>{const b=$(id);if(!b)return;b.classList.toggle('recording',recording);b.setAttribute('aria-pressed',String(recording));b.innerHTML=recording?'<span class="voice-button-icon">■</span><span>Stop recording</span>':'<span class="voice-button-icon">🎙</span><span>Start recording</span>'});
+  ['mapVoiceConsole','chatVoiceConsole'].forEach(id=>{const el=$(id);if(el)el.classList.toggle('recording',recording)});
+  document.querySelectorAll('.voice-live-dot').forEach(el=>el.classList.toggle('recording',recording));
+  if(recording){voiceStartedAt=Date.now();updateVoiceClock();clearInterval(voiceClockInterval);voiceClockInterval=setInterval(updateVoiceClock,200)}else{clearInterval(voiceClockInterval);voiceClockInterval=null}
+}
+function renderVoiceMessage(message){
+  if(!message||!message.audio||!message.mimeType)return;
+  const list=$('voiceMessages');if(!list)return;
+  const card=document.createElement('div');card.className='card';
+  const heading=document.createElement('h2');heading.textContent=(message.name||'Convoy member')+' · Voice message';
+  const meta=document.createElement('p');meta.className='subtitle';meta.textContent=message.timestamp?new Date(message.timestamp).toLocaleString():'Just now';
+  const audio=document.createElement('audio');audio.controls=true;audio.preload='metadata';audio.style.width='100%';audio.src='data:'+message.mimeType+';base64,'+message.audio;
+  card.append(heading,meta,audio);list.prepend(card);
+  while(list.children.length>50)list.lastElementChild.remove();
+}
+socket.on('voice-history',messages=>{const list=$('voiceMessages');if(!list)return;list.replaceChildren();if(Array.isArray(messages))messages.forEach(renderVoiceMessage)});
+socket.on('voice-message',message=>renderVoiceMessage(message));
+socket.on('voice-error',message=>setVoiceStatus(String(message||'Voice message could not be sent.')));
+async function startVoiceRecording(){
+  if(!session){setVoiceStatus('Create or join a trip before recording.');return}
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setVoiceStatus('Voice recording is not supported in this browser. Use HTTPS or localhost.');return}
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});voiceChunks=[];
+    const mimeCandidates=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+    const mimeType=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
+    voiceRecorder=new MediaRecorder(voiceStream,mimeType?{mimeType}:undefined);
+    voiceRecorder.ondataavailable=event=>{if(event.data&&event.data.size)voiceChunks.push(event.data)};
+    voiceRecorder.onerror=()=>setVoiceStatus('Recording failed. Please try again.');
+    voiceRecorder.onstop=async()=>{
+      clearTimeout(voiceTimer);voiceTimer=null;clearInterval(voiceClockInterval);voiceClockInterval=null;
+      const recorder=voiceRecorder;voiceRecorder=null;
+      if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}
+      setVoiceButtons(false);
+      try{
+        const blob=new Blob(voiceChunks,{type:recorder?.mimeType||'audio/webm'});voiceChunks=[];
+        if(!blob.size){setVoiceStatus('No audio captured. Try again.');return}
+        if(blob.size>MAX_AUDIO_BYTES){setVoiceStatus('Recording is too large. Please record a shorter message.');return}
+        setVoiceStatus('Sending voice message…');
+        const reader=new FileReader();reader.onload=()=>{
+          const dataUrl=String(reader.result||'');const comma=dataUrl.indexOf(',');
+          if(comma<0){setVoiceStatus('Could not prepare the recording.');return}
+          socket.emit('voice-message',{audio:dataUrl.slice(comma+1),mimeType:blob.type||'audio/webm'},result=>{
+            if(result&&result.ok)setVoiceStatus('Voice message sent.');else setVoiceStatus(result?.error||'Could not send voice message.');
+          });
+        };reader.onerror=()=>setVoiceStatus('Could not read the recording.');reader.readAsDataURL(blob);
+      }catch(error){setVoiceStatus('Could not send the recording. Please try again.')}
+    };
+    voiceRecorder.start();voiceRecording=true;setVoiceButtons(true);setVoiceStatus('Recording… speak clearly. Tap Stop when finished.');
+    voiceTimer=setTimeout(()=>stopVoiceRecording(),MAX_VOICE_MS);
+  }catch(error){if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}setVoiceStatus(error?.name==='NotAllowedError'?'Microphone permission denied. Allow microphone access and try again.':'Could not access the microphone. Check browser permissions and HTTPS.');}
+}
+function stopVoiceRecording(){if(voiceRecorder&&voiceRecorder.state!=='inactive'){clearTimeout(voiceTimer);voiceTimer=null;voiceRecorder.stop();voiceRecording=false}}
+function toggleVoiceRecording(){if(voiceRecorder&&voiceRecorder.state==='recording')stopVoiceRecording();else startVoiceRecording()}
+['mapTalkButton','chatTalkButton'].forEach(id=>{const button=$(id);if(button)button.addEventListener('click',toggleVoiceRecording)});
+
+const name=()=>$('name').value.trim()||'Driver';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function setMsg(s){$('msg').textContent=s||''}
+function showBanner(html,kind='',ms=7000){
+  $('banner').innerHTML=html;$('banner').className=kind;$('banner').style.display='block';clearTimeout(bannerTimer);
+  if(ms)bannerTimer=setTimeout(()=>{$('banner').style.display='none';if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}},ms);
+}
+function geoError(e){
+  if(!window.isSecureContext&&location.hostname!=='localhost')return 'Location requires HTTPS. Open your secure tunnel link.';
+  if(e.code===1)return 'Location permission denied. Allow location in browser settings.';
+  if(e.code===2)return 'Could not get GPS. Try outside with GPS enabled.';
+  return 'Location timed out. Please try again.';
+}
+$('search').onclick=async()=>{
+  const q=$('dest').value.trim();if(!q)return setMsg('Enter a destination.');
+  setMsg('Searching…');$('results').innerHTML='';chosen=null;
+  try{
+    const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();
+    const list=await r.json();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
+    list.forEach(place=>{
+      const b=document.createElement('button');b.textContent=place.label;
+      b.onclick=()=>{chosen=place;[...$('results').children].forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
+      $('results').appendChild(b);
+    });
+  }catch{setMsg('Search failed. Check your internet and server.')}
+};
+$('dest').addEventListener('keydown',e=>{if(e.key==='Enter')$('search').click()});
+$('code').addEventListener('input',()=>{$('code').value=$('code').value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
+
+$('create').onclick=()=>{
+  if(!chosen)return setMsg('Search for a destination and select a result.');
+  if(!navigator.geolocation)return setMsg('This browser does not support GPS.');
+  setMsg('Getting your location…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    setMsg('Building route…');
+    socket.emit('create-trip',{name:name(),start:{lat:pos.coords.latitude,lon:pos.coords.longitude},destination:chosen},res=>{
+      if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.');
+    });
+  },e=>setMsg(geoError(e)),{enableHighAccuracy:true,timeout:15000});
+};
+$('join').onclick=()=>{
+  const code=$('code').value.trim().toUpperCase();if(code.length!==4)return setMsg('Enter the 4-letter trip code.');
+  socket.emit('join-trip',{code,name:name()},res=>{
+    if(res&&res.ok)startApp(res);else setMsg(res?.error||'Could not join this trip.');
+  });
+};
+
+
+function openPlanner(res){
+  pendingTrip=res;plannedWaypoints=Array.isArray(res.waypoints)?res.waypoints.slice():[];$('setup').hidden=true;$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;
+  $('plannerDestination').textContent=res.destination?.label||'Selected destination';$('plannerMessage').textContent='Search for a place and add it to your route.';$('waypointResults').replaceChildren();
+  if(plannerMap){plannerMap.remove();plannerMap=null}
+  plannerMap=new maplibregl.Map({container:'plannerMap',center:res.route?.[0]||[77.6,13],zoom:10,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});
+  plannerMap.addControl(new maplibregl.NavigationControl());plannerMap.on('load',drawPlannerRoute);renderPlannerStops();
+}
+function drawPlannerRoute(){
+  if(!plannerMap||!pendingTrip||!plannerMap.isStyleLoaded())return;const original=Array.isArray(pendingTrip.route)?pendingTrip.route:[];if(original.length<2)return;
+  const coords=[original[0],...plannedWaypoints.map(w=>[Number(w.lon),Number(w.lat)]),original[original.length-1]],feature={type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}};
+  if(plannerMap.getSource('planned-route'))plannerMap.getSource('planned-route').setData(feature);else{plannerMap.addSource('planned-route',{type:'geojson',data:feature});plannerMap.addLayer({id:'planned-route-line',type:'line',source:'planned-route',paint:{'line-color':'#f4c430','line-width':5},layout:{'line-cap':'round','line-join':'round'}})}
+  plannerMarkers.forEach(m=>m.remove());plannerMarkers=[];plannedWaypoints.forEach((w,i)=>{const el=document.createElement('div');el.className='waypoint-icon';el.textContent='P';plannerMarkers.push(new maplibregl.Marker({element:el}).setLngLat([Number(w.lon),Number(w.lat)]).setPopup(new maplibregl.Popup().setText(w.label||`Waypoint ${i+1}`)).addTo(plannerMap))});
+  const bounds=new maplibregl.LngLatBounds(coords[0],coords[0]);coords.forEach(c=>bounds.extend(c));plannerMap.fitBounds(bounds,{padding:45,duration:0});
+}
+function renderPlannerStops(){const list=$('plannerStops');list.replaceChildren();plannedWaypoints.forEach((w,i)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('span');label.textContent=`${i+1}. ${w.label||w.name||'Waypoint'}`;const b=document.createElement('button');b.className='remove-stop';b.textContent='Remove';b.onclick=()=>{plannedWaypoints.splice(i,1);renderPlannerStops();drawPlannerRoute()};row.append(label,b);list.appendChild(row)});if(!plannedWaypoints.length){const p=document.createElement('p');p.className='subtitle';p.textContent='No stops added yet.';list.appendChild(p)}}
+$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren();try{const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();const results=await r.json();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
+$('waypointSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchWaypoint').click()});
+$('backToSetup').onclick=()=>{$('planner').hidden=true;$('setup').hidden=false;if(plannerMap){plannerMap.remove();plannerMap=null}};
+$('editWaypoints').onclick=()=>{if(!pendingTrip){showBanner('<b>Route editing</b>Create a trip first to edit stops.','warn',5000);return}$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap.resize(),80)};
+$('startPlannedTrip').onclick=()=>{if(!pendingTrip)return;if(!plannedWaypoints.length){startApp({...pendingTrip,waypoints:[]});return}$('plannerMessage').textContent='Saving stops to the trip…';socket.emit('update-waypoints',{code:pendingTrip.code,waypoints:plannedWaypoints},res=>{if(!res||!res.ok){$('plannerMessage').textContent=res?.error||'Server support for saving waypoints is not installed yet. Add update-waypoints to index.js.';return}pendingTrip={...pendingTrip,...res,waypoints:res.waypoints||plannedWaypoints};startApp(pendingTrip)})};
+function renderUpcomingWaypoints(waypoints=[]){const list=$('waypointsList');list.replaceChildren();$('emptyWaypoints').hidden=waypoints.length>0;waypoints.forEach((w,i)=>{const card=document.createElement('div');card.className='waypoint-card';const icon=document.createElement('div');icon.className='waypoint-icon';icon.textContent='P';const info=document.createElement('div');info.className='waypoint-info';const title=document.createElement('strong');title.textContent=w.label||w.name||`Waypoint ${i+1}`;const detail=document.createElement('p');detail.textContent=w.description||(i===0?'Next planned stop':'Planned rally check');const distance=document.createElement('div');distance.className='waypoint-distance';const d=Number(w.distanceKm);distance.textContent=Number.isFinite(d)?d.toFixed(1):'—';const small=document.createElement('small');small.textContent=Number.isFinite(d)?'KM':'DISTANCE';distance.appendChild(small);info.append(title,detail);card.append(icon,info,distance);list.appendChild(card)})}
+socket.on('waypoints',waypoints=>{if(Array.isArray(waypoints)){plannedWaypoints=waypoints;renderUpcomingWaypoints(waypoints)}});
+socket.on('route-updated',update=>{
+  if(!update)return;
+  pendingTrip={...pendingTrip,...update};
+  plannedWaypoints=Array.isArray(update.waypoints)?update.waypoints:plannedWaypoints;
+  renderUpcomingWaypoints(plannedWaypoints);
+  if(map&&Array.isArray(update.route)&&update.route.length){
+    const feature={type:'Feature',geometry:{type:'LineString',coordinates:update.route},properties:{}};
+    if(map.getSource('route'))map.getSource('route').setData(feature);
+    else if(map.isStyleLoaded()){map.addSource('route',{type:'geojson',data:feature});map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#17191d','line-width':9}});map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':'#f4c430','line-width':5}});}
+    const bounds=update.route.reduce((b,c)=>b.extend(c),new maplibregl.LngLatBounds(update.route[0],update.route[0]));map.fitBounds(bounds,{padding:45,duration:0});
+  }
+});
+
+function startApp(res){
+  pendingTrip=res;
+  session={code:res.code,name:name()};
+  $('setup').hidden=true;$('app').hidden=false;$('nav').hidden=false;
+  $('tripcode').textContent=$('summarycode').textContent=res.code||'----';
+  const dest=(res.destination?.label)||'Destination';
+  $('topdest').textContent=dest.split(',').slice(0,2).join(',');
+  $('destlabel').textContent='→ '+dest;$('summarydest').textContent='Destination: '+dest;
+  $('destinationinfo').textContent=dest;
+  renderUpcomingWaypoints(res.waypoints||plannedWaypoints||[]);
+  if(map){map.remove();map=null}
+  Object.keys(markers).forEach(k=>delete markers[k]);
+  map=new maplibregl.Map({
+    container:'map',center:res.route?.[0]||[77.6,13],zoom:11,
+    style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}
+  });
+  map.addControl(new maplibregl.NavigationControl(),'top-right');
+  map.on('load',()=>{
+    if(res.route?.length){
+      map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:res.route}}});
+      map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#17191d','line-width':9}});
+      map.addLayer({id:'route-line',type:'line',source:'route',paint:{'line-color':'#f4c430','line-width':5}});
+      const bounds=res.route.reduce((b,c)=>b.extend(c),new maplibregl.LngLatBounds(res.route[0],res.route[0]));
+      map.fitBounds(bounds,{padding:45,duration:0});
+    }
+    if(res.destination){
+      const el=document.createElement('div');el.className='dest';el.textContent='Destination';
+      new maplibregl.Marker({element:el}).setLngLat([res.destination.lon,res.destination.lat]).addTo(map);
+    }
+  });
+  startSharing();showScreen('map');
+}
+
+// Full-screen navigation: uses OSRM turn instructions and mirrors the live Socket.IO convoy.
+function navDestination(){return pendingTrip?.destination||chosen||null;}
+function navFormatDistance(m){if(!Number.isFinite(m))return '—';if(m<1000)return Math.max(0,Math.round(m))+' m';return (m/1000).toFixed(m<10000?1:0)+' km';}
+function navDistance(a,b){const R=6371000,rad=v=>v*Math.PI/180;const dLat=rad(b[1]-a[1]),dLon=rad(b[0]-a[0]);const x=Math.sin(dLat/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+function navManeuverIcon(type,modifier){if(type==='turn'||type==='end of road'||type==='fork'){if(modifier?.includes('left'))return '↰';if(modifier?.includes('right'))return '↱';if(modifier==='uturn')return '↶';return '↑'}if(type==='roundabout'||type==='rotary')return '⟳';if(type==='merge')return '⇢';if(type==='depart')return '↑';if(type==='arrive')return '🏁';if(type==='continue'||type==='new name')return '↑';return '↗';}
+function navManeuverText(step){const m=step?.maneuver||{},type=m.type||'continue',mod=m.modifier||'';if(type==='depart')return 'Start driving';if(type==='arrive')return 'You have arrived';if(type==='roundabout'||type==='rotary')return 'Enter the roundabout'+(mod?' and '+mod:'');if(type==='merge')return 'Merge'+(mod?' '+mod:'');if(type==='fork')return 'Keep '+(mod||'straight');if(type==='end of road')return 'At the end of the road, turn '+(mod||'ahead');if(type==='turn')return (mod==='slight left'?'Turn slightly left':mod==='slight right'?'Turn slightly right':mod==='sharp left'?'Turn sharp left':mod==='sharp right'?'Turn sharp right':mod==='uturn'?'Make a U-turn':mod==='left'?'Turn left':mod==='right'?'Turn right':'Continue');if(type==='arrive')return 'You have arrived';return 'Continue straight';}
+function navEnsureMap(){if(navMap)return;navMap=new maplibregl.Map({container:'navMap',center:lastGps?[lastGps.lon,lastGps.lat]:(pendingTrip?.route?.[0]||[77.6,13]),zoom:15,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});navMap.addControl(new maplibregl.NavigationControl(),'top-right');navMap.on('load',()=>{navDrawRoute();navRenderCars();});}
+function navDrawRoute(){if(!navMap||!navMap.isStyleLoaded()||navRouteCoords.length<2)return;const data={type:'Feature',geometry:{type:'LineString',coordinates:navRouteCoords},properties:{}};if(navMap.getSource('nav-route'))navMap.getSource('nav-route').setData(data);else{navMap.addSource('nav-route',{type:'geojson',data});navMap.addLayer({id:'nav-route-casing',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#17191d','line-width':10}});navMap.addLayer({id:'nav-route-line',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#f4c430','line-width':6}});}const bounds=new maplibregl.LngLatBounds(navRouteCoords[0],navRouteCoords[0]);navRouteCoords.forEach(c=>bounds.extend(c));navMap.fitBounds(bounds,{padding:{top:105,bottom:95,left:40,right:40},maxZoom:16,duration:500});}
+async function navFetchDirections(){const dest=navDestination();if(!dest||!Number.isFinite(Number(dest.lon))||!Number.isFinite(Number(dest.lat))){$('navInstruction').textContent='Destination coordinates unavailable';$('navRoadName').textContent='Choose a destination and start a trip first.';return;}if(!lastGps){$('navInstruction').textContent='Waiting for your GPS location';$('navRoadName').textContent='Allow location access to calculate turn-by-turn directions.';return;}const requestId=++navRouteRequest;$('navInstruction').textContent='Calculating directions…';$('navRoadName').textContent='Fetching driving route';try{const start=`${lastGps.lon},${lastGps.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url);if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navStepIndex=0;navLastRouteAt=Date.now();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){if(requestId!==navRouteRequest)return;$('navInstruction').textContent='Turn-by-turn unavailable';$('navRoadName').textContent='Check internet access. The shared convoy map remains available.';$('navNotice').textContent='The routing service could not return directions. Try again when connected.';}}
+function navUpdateInstruction(){if(!navOpen||!navStepsCountExists())return;const pos=lastGps?[lastGps.lon,lastGps.lat]:null;if(!navRouteSteps.length){$('navTurnIcon').textContent='↑';$('navTurnLabel').textContent='NAVIGATION';$('navTurnDistance').innerHTML='—<small>TO TURN</small>';$('navNextSteps').innerHTML='<div class="nav-step-chip">Directions will appear once a route is available.</div>';return;}if(pos){let best=navStepIndex,bestDist=Infinity;for(let i=Math.max(0,navStepIndex);i<Math.min(navRouteSteps.length,navStepIndex+4);i++){const loc=navRouteSteps[i].maneuver?.location;if(!loc)continue;const d=navDistance(pos,loc);if(d<bestDist){bestDist=d;best=i;}}if(bestDist<65&&best<navRouteSteps.length-1)navStepIndex=Math.max(navStepIndex,best+1);}
+const step=navRouteSteps[Math.min(navStepIndex,navRouteSteps.length-1)],maneuver=step.maneuver||{},loc=maneuver.location;let meters=loc&&pos?navDistance(pos,loc):Number(step.distance)||0;const text=navManeuverText(step);$('navTurnIcon').textContent=navManeuverIcon(maneuver.type,maneuver.modifier);$('navTurnLabel').textContent=navStepIndex===0?'FIRST MANEUVER':'NEXT MANEUVER';$('navInstruction').textContent=text;$('navRoadName').textContent=step.name?`onto ${step.name}`:(maneuver.type==='arrive'?'Destination reached':'Follow the highlighted route');$('navTurnDistance').innerHTML=navFormatDistance(meters)+'<small>TO TURN</small>';
+const upcoming=navRouteSteps.slice(navStepIndex+1,navStepIndex+5);$('navStepsCount').textContent=`${upcoming.length} after this`; $('navNextSteps').innerHTML=upcoming.map((st,i)=>`<div class="nav-step-chip"><b>${navManeuverIcon(st.maneuver?.type,st.maneuver?.modifier)}</b>${navManeuverText(st)}${st.name?' · '+esc(st.name):''}<br><span style="color:#9ca3af">${navFormatDistance(st.distance)}</span></div>`).join('')||'<div class="nav-step-chip">Final maneuver</div>';}
+function navStepsCountExists(){return !!$('navStepsCount');}
+function navRenderCars(){if(!navOpen)return;$('navLiveCount').textContent=`${navCars.length} vehicle${navCars.length===1?'':'s'}`;$('navConvoy').innerHTML=navCars.map(c=>{const status=c.status||'offline',color=COLORS[status]||COLORS.offline,isMe=c.id===socket.id;return `<button class="nav-person ${isMe?'me':''}" data-nav-car="${esc(c.id)}"><span class="mini-avatar" style="background:${color}">${esc(String(c.name||'?').slice(0,1).toUpperCase())}</span><span><b>${esc(c.name||'Driver')}${isMe?' (you)':''}</b><small>${esc(LABEL[status]||status)}${Number.isFinite(Number(c.gapKm))&&Number(c.gapKm)>0?' · '+Number(c.gapKm).toFixed(1)+' km back':''}</small></span></button>`}).join('')||'<div class="nav-step-chip">Waiting for convoy positions…</div>';document.querySelectorAll('[data-nav-car]').forEach(b=>b.onclick=()=>{const c=navCars.find(x=>String(x.id)===b.dataset.navCar);if(c&&Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))&&navMap)navMap.flyTo({center:[Number(c.lon),Number(c.lat)],zoom:16,duration:700});});if(!navMap||!navMap.isStyleLoaded())return;const seen=new Set();navCars.forEach(c=>{if(!Number.isFinite(Number(c.lon))||!Number.isFinite(Number(c.lat)))return;seen.add(String(c.id));if(!navMarkers[c.id]){const el=document.createElement('div');el.className='nav-pin'+(c.id===socket.id?' me':'');navMarkers[c.id]=new maplibregl.Marker({element:el}).setLngLat([Number(c.lon),Number(c.lat)]).addTo(navMap);}const el=navMarkers[c.id].getElement();el.textContent=String(c.name||'?').slice(0,1).toUpperCase();el.style.background=COLORS[c.status]||COLORS.offline;glideMarker('nav-'+c.id,navMarkers[c.id],[Number(c.lon),Number(c.lat)]);});Object.keys(navMarkers).forEach(id=>{if(!seen.has(String(id))){navMarkers[id].remove();delete navMarkers[id]}});}
+async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();setTimeout(()=>navMap?.resize(),100);$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||Date.now()-navLastRouteAt>120000)await navFetchDirections();else navUpdateInstruction();if(lastGps&&navMap)navMap.flyTo({center:[lastGps.lon,lastGps.lat],zoom:15,duration:500});}
+function closeNavigation(){navOpen=false;$('navigationScreen').hidden=true;document.body.style.overflow='';if(navMap&&map){setTimeout(()=>navMap.resize(),80)}}
+$('openNavigation').onclick=openNavigation;$('closeNavigation').onclick=closeNavigation;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&navOpen)closeNavigation();});
+window.addEventListener('resize',()=>{if(navOpen&&navMap)setTimeout(()=>navMap.resize(),80)});
+
+function clearFuelMarkers(){fuelMarkers.forEach(marker=>marker.remove());fuelMarkers=[];}
+async function loadFuelStations(lat,lon){
+  if(!map||!fuelVisible)return;
+  const requestId=++fuelRequestId;
+  const query=`[out:json][timeout:20];(nwr(around:5000,${lat},${lon})[amenity=fuel];);out center tags;`;
+  try{
+    const response=await fetch('https://overpass-api.de/api/interpreter',{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(query)
+    });
+    if(!response.ok)throw new Error('Fuel station search failed');
+    const data=await response.json();
+    if(!fuelVisible||!map||requestId!==fuelRequestId)return;
+    clearFuelMarkers();
+    (data.elements||[]).forEach(station=>{
+      const stationLat=Number(station.lat??station.center?.lat);
+      const stationLon=Number(station.lon??station.center?.lon);
+      if(!Number.isFinite(stationLat)||!Number.isFinite(stationLon))return;
+      if(Math.abs(stationLat)>90||Math.abs(stationLon)>180)return;
+      const tags=station.tags||{};
+      const name=tags.name||tags.brand||'Fuel station';
+      const el=document.createElement('div');el.className='fuel-pin';el.textContent='⛽';el.title=name;
+      const popupContent=document.createElement('div');
+      const title=document.createElement('strong');title.textContent=name;popupContent.appendChild(title);
+      const addressParts=[tags['addr:street'],tags['addr:city']].filter(Boolean);
+      if(addressParts.length){const address=document.createElement('p');address.textContent=addressParts.join(', ');popupContent.appendChild(address);}
+      fuelMarkers.push(new maplibregl.Marker({element:el}).setLngLat([stationLon,stationLat]).setPopup(new maplibregl.Popup({offset:18}).setDOMContent(popupContent)).addTo(map));
+    });
+    showBanner(`<b>${fuelMarkers.length} fuel stations found</b>Within approximately 5 km. Tap a marker for details.`,'ok',4500);
+  }catch(e){
+    if(requestId===fuelRequestId&&fuelVisible)showBanner('<b>Fuel search failed</b>Check your internet connection and try again.','warn',5000);
+  }
+}
+$('fuelToggle').onclick=()=>{
+  fuelVisible=!fuelVisible;
+  const button=$('fuelToggle');button.classList.toggle('active',fuelVisible);button.setAttribute('aria-pressed',String(fuelVisible));
+  button.textContent=fuelVisible?'⛽ Hide fuel stations':'⛽ Fuel stations';
+  if(!fuelVisible){fuelRequestId++;clearFuelMarkers();return;}
+  if(lastGps)loadFuelStations(lastGps.lat,lastGps.lon);
+  else if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(position=>{
+      lastGps={lat:position.coords.latitude,lon:position.coords.longitude};
+      loadFuelStations(lastGps.lat,lastGps.lon);
+    },()=>showBanner('<b>Location unavailable</b>Allow GPS access and try again.','warn',5000),{enableHighAccuracy:true,timeout:12000});
+  }else showBanner('<b>GPS unavailable</b>This browser does not support location access.','warn',5000);
+};
+
+function startSharing(){
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  let last=0,lastFuelSearch=0;
+  watchId=navigator.geolocation.watchPosition(p=>{
+    if(Date.now()-last<1000)return;last=Date.now();
+    lastGps={lat:p.coords.latitude,lon:p.coords.longitude};
+    if(navOpen){navUpdateInstruction();if(Date.now()-navLastRouteAt>120000)navFetchDirections();if(navMap&&navMap.isStyleLoaded())navMap.easeTo({center:[lastGps.lon,lastGps.lat],duration:500});}
+    const speedMps=p.coords.speed;
+    $('speedValue').textContent=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):'--';
+    if(fuelVisible&&Date.now()-lastFuelSearch>30000){lastFuelSearch=Date.now();loadFuelStations(lastGps.lat,lastGps.lon)}
+    socket.emit('position',{lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy,speed:p.coords.speed});
+  },e=>showBanner('<b>Location problem</b>'+esc(geoError(e)),'warn',8000),{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+  keepScreenOn();
+}
+async function keepScreenOn(){try{if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen')}catch{}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session)keepScreenOn()});
+
+function showScreen(which){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+which));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===which));
+  if(which==='map'&&map)setTimeout(()=>map.resize(),80);
+}
+document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
+$('follow').onclick=()=>{$('follow').textContent='Follow: '+((follow=!follow)?'ON':'OFF')};
+$('recenter').onclick=()=>{
+  if(!map)return;
+  const pts=Object.values(markers).map(m=>m.getLngLat());
+  if(pts.length){const b=new maplibregl.LngLatBounds(pts[0],pts[0]);pts.forEach(p=>b.extend(p));map.fitBounds(b,{padding:70,maxZoom:15})}
+};
+$('stop').onclick=()=>{
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  if(wakeLock)wakeLock.release().catch(()=>{});
+  socket.disconnect();location.reload();
+};
+socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
+
+socket.on('cars',cars=>{
+  if(!Array.isArray(cars))return;
+  navCars=cars.slice();
+  if(navOpen){navRenderCars();navUpdateInstruction();}
+  if(!map)return;
+  const bounds=new maplibregl.LngLatBounds(),seen=new Set();
+  $('statuscars').innerHTML='';
+  let on=0,maxGap=0;
+  cars.forEach(c=>{
+    seen.add(c.id);
+    if(['ok','behind','arrived'].includes(c.status))on++;
+    if(Number.isFinite(Number(c.gapKm)))maxGap=Math.max(maxGap,Number(c.gapKm));
+    if(Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))){
+      if(!markers[c.id]){
+        const el=document.createElement('div');el.className='pin'+(c.id===socket.id?' me':'');
+        el.textContent=String(c.name||'?')[0].toUpperCase();
+        markers[c.id]=new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).addTo(map);
+      }
+      // NEW: glide to the new position instead of jumping
+      glideMarker(c.id,markers[c.id],[Number(c.lon),Number(c.lat)]);
+      const pinEl=markers[c.id].getElement();
+      pinEl.style.background=COLORS[c.status]||COLORS.offline;
+      // NEW: ripple ring on off-route drivers
+      pinEl.classList.toggle('alert',c.status==='off');
+      bounds.extend([c.lon,c.lat]);
+    }
+    const status=c.status||'offline',gap=Number(c.gapKm);
+    let detail=LABEL[status]||status;
+    if(Number.isFinite(gap)&&gap>0)detail=gap.toFixed(1)+' km behind';
+    if(c.etaMin!==null&&c.etaMin!==undefined)detail+=' · '+c.etaMin+' min';
+    const row=`<div class="row"><div class="person"><div class="avatar">${esc(String(c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name||'Driver')}${c.id===socket.id?' (you)':''}</b><br><small>${esc(detail)}</small></div></div><span class="status ${esc(status)}">${esc(LABEL[status]||status)}</span></div>`;
+    $('statuscars').insertAdjacentHTML('beforeend',row);
+  });
+  Object.keys(markers).forEach(id=>{if(!seen.has(id)){cancelAnimationFrame(glides.get(id));markers[id].remove();delete markers[id]}});
+  if(follow&&cars.length&&!bounds.isEmpty())map.fitBounds(bounds,{padding:100,maxZoom:15,duration:500});
+  // NEW: animated count-up for the metrics
+  ['memberCount','smembers','umembers'].forEach(id=>animateNumber($(id),cars.length));
+  ['onroute','sonroute','uonroute'].forEach(id=>animateNumber($(id),on));
+  ['gap','sgap','ugap'].forEach(id=>animateNumber($(id),maxGap,1,' km'));
+  if(!cars.length){$('statuscars').textContent='Waiting for convoy members…'}
+});
+
+socket.on('alert',a=>{
+  const who=a.id===socket.id?'You':esc(a.name||'A convoy member');
+  if(a.type==='missed-turn'){
+    const r=a.rejoin;
+    showBanner(`<b>${who} missed a turn</b>${Number(a.offMeters)||0} m off route.`+
+      (r?`<br>Suggested: ${esc(r.kind)} at km ${esc(r.km)}.`:''),'warn',10000);
+    if(rejoinMarker)rejoinMarker.remove();rejoinMarker=null;
+    if(r&&map&&Array.isArray(r.point)){
+      const el=document.createElement('div');el.className='rejoin';el.textContent='Rejoin here';
+      rejoinMarker=new maplibregl.Marker({element:el}).setLngLat(r.point).addTo(map);
+    }
+  }else if(a.type==='rejoined'){
+    showBanner(`<b>${who} is back on route</b>Convoy whole again.`,'ok',5000);
+    if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}
+  }else if(a.type==='gap'){
+    showBanner(`<b>${esc(a.name)} is ${esc(a.gapKm)} km behind</b>The convoy is spreading out.`,'warn',8000);
+  }
+});
+async function shareInvite(){
+  if(!session)return;
+  const url=new URL(location.href);url.searchParams.set('code',session.code);
+  const text=`Join my ONEROUTE convoy\nLink: ${url}\nCode: ${session.code}`;
+  try{
+    if(navigator.share)await navigator.share({title:'Join ONEROUTE',text,url:String(url)});
+    else{await navigator.clipboard.writeText(text);showBanner('<b>Invite copied</b>Send it to your group.','ok',4000)}
+  }catch(e){if(e.name!=='AbortError')window.prompt('Copy invite',text)}
+}
+$('share').onclick=shareInvite;
+$('copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText(session.code);showBanner('<b>Trip code copied</b>'+esc(session.code),'ok',3000)}
+  catch{window.prompt('Copy trip code',session.code)}
+};
+const invite=new URLSearchParams(location.search).get('code');
+if(invite)$('code').value=invite.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);
+$('quickStopToggle').onclick=()=>{
+  const menu=$('quickStopMenu');menu.hidden=!menu.hidden;
+  $('quickStopToggle').setAttribute('aria-expanded',String(!menu.hidden));
+};
+$('closeQuickStop').onclick=()=>{$('quickStopMenu').hidden=true;$('quickStopToggle').setAttribute('aria-expanded','false')};
+document.querySelectorAll('[data-stop-query]').forEach(button=>button.addEventListener('click',()=>{
+  const query=button.dataset.stopQuery;
+  $('quickStopMenu').hidden=true;$('quickStopToggle').setAttribute('aria-expanded','false');
+  if(!pendingTrip||!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  $('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;
+  if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap?.resize(),80);
+  $('waypointSearch').value=query;$('searchWaypoint').click();
+}));
+})();
+
+window.addEventListener('beforeunload',()=>{try{clearTimeout(voiceTimer);clearInterval(voiceClockInterval);if(voiceRecorder&&voiceRecorder.state!=='inactive')voiceRecorder.stop();if(voiceStream)voiceStream.getTracks().forEach(track=>track.stop())}catch{}});
+</script>
+</body>
+</html>
