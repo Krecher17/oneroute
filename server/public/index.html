@@ -230,6 +230,46 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
   .rejoin,.hero h1 span,.screen.active{animation:none!important}
 }
 
+/* ===== Smart regroup + "I'm stopping" ===== */
+.regroup-panel,.halt-panel{margin-top:18px;background:#1d2025;border:1px solid var(--line);border-radius:18px;padding:16px}
+.regroup-panel{border-color:#5d4e1d}
+.regroup-panel h2{margin:4px 0 6px}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.regroup-pin{background:#1b57a6;color:#fff;border:2px solid #fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900;box-shadow:0 3px 12px #0009;white-space:nowrap}
+.halt-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.halt-row:first-of-type{border-top:0}
+.halt-row b{color:var(--orange)}
+.map-tools button.halted,.navtop button.halted{background:var(--orange);color:#17191d;border-color:var(--orange)}
+.pin.halted{border-color:var(--orange)}
+.pin.halted::before{content:"⏸";position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:50%;background:var(--orange);color:#17191d;font-size:10px;display:grid;place-items:center}
+/* ===== Alerts, SOS, quick replies, waveform, skeletons, confetti, print ===== */
+.map-tools{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 28px)}
+.map-tools button.sos-on,.navtop button.sos-on{background:var(--red);color:#fff;border-color:var(--red)}
+.sos-panel{margin-top:18px;background:#2a1f1f;border:1px solid #6b2f2c;border-radius:18px;padding:16px}
+.sos-panel h2{margin:0 0 6px}
+.sos-pin{background:var(--red);color:#fff;border:2px solid #fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900;box-shadow:0 3px 12px #0009;white-space:nowrap;animation:sosBlink 1s ease-in-out infinite}
+@keyframes sosBlink{50%{opacity:.55}}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.quick-grid button{padding:14px 10px;text-align:left;background:#343943;color:#fff}
+.wave{display:block;width:100%;height:46px;margin-top:10px;border-radius:10px;background:#191c21;opacity:.45}
+.wave.live{opacity:1}
+.skeleton{height:44px;margin-top:7px;border-radius:10px;background:linear-gradient(90deg,#2a2e36 25%,#383d47 50%,#2a2e36 75%);background-size:200% 100%;animation:skel 1.2s linear infinite}
+.skeleton.chip{flex:0 0 150px;height:46px;margin-top:0}
+@keyframes skel{to{background-position:-200% 0}}
+.pin.stale{opacity:.6;filter:grayscale(.6)}
+.seen-tag{position:absolute;top:40px;left:50%;translate:-50% 0;white-space:nowrap;font-size:10px;font-weight:700;background:#17191d;color:#fff;border:1px solid #555;padding:2px 6px;border-radius:8px}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3000}
+@media print{
+  *{animation:none!important;transition:none!important}
+  body{background:#fff!important;color:#000!important}
+  body *{visibility:hidden}
+  #screen-summary,#screen-summary *{visibility:visible}
+  #screen-summary{position:absolute;left:0;top:0;width:100%;max-width:none;display:block!important;padding:0}
+  #screen-summary .card,#screen-summary .metric{background:#fff!important;color:#000!important;border:1px solid #999!important;box-shadow:none!important}
+  #screen-summary small,#screen-summary .subtitle,#screen-summary .eyebrow{color:#444!important}
+  #screen-summary .code{color:#000!important}
+  #screen-summary .no-print,#screen-summary button,#screen-summary .notice{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -293,6 +333,9 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
           <button id="follow">Follow: ON</button>
           <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
           <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+          <button id="haltToggle">⏸ I'm stopping</button>
+          <button id="sosButton">🆘 SOS</button>
+          <button id="alertsToggle">🔊 Alerts: ON</button>
         </div>
         <div id="quickStopMenu" class="quick-stop-menu" hidden>
           <h3>Add a stop to your convoy route</h3>
@@ -312,7 +355,16 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
         <p>Record a short audio message and send it to everyone in your convoy. Tap again to stop recording.</p>
         <div class="voice-controls"><button type="button" id="mapTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Start recording</span></button><span id="mapTalkTimer" class="voice-timer">00:00</span></div>
         <div id="mapTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Ready when you are</span></div>
+        <canvas id="mapWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
         <div id="voiceMessages" class="voice-messages" aria-live="polite"></div>
+      </section>
+      <section id="sosPanel" class="sos-panel" hidden><h2>🆘 SOS</h2><div id="sosList"></div></section>
+      <section id="regroupPanel" class="regroup-panel" hidden>
+        <p class="eyebrow">Smart regroup</p><h2 id="regroupTitle">Regroup point</h2><p id="regroupDetail" class="subtitle"></p>
+        <div class="panel-actions"><button id="regroupShow">Show on map</button><button id="regroupDismiss" class="secondary">Dismiss</button></div>
+      </section>
+      <section id="haltPanel" class="halt-panel" hidden>
+        <h2>⏸ Convoy halts</h2><p id="haltSummary" class="subtitle"></p><div id="haltList"></div>
       </section>
       <section class="waypoints-panel">
         <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
@@ -323,6 +375,7 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
       <div class="card">
         <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy">Copy</button></div>
       </div>
+      <div class="card"><h2>Live link for family</h2><p class="subtitle">Anyone with this link can watch the convoy on a map. It is read-only and needs no trip code, so only share it with people you trust.</p><button id="shareLive" class="full secondary">Share live link</button></div>
     </section>
 
     <section id="screen-status" class="screen">
@@ -344,7 +397,10 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
         <p>Send an audio message to the convoy. Allow microphone access when your browser asks.</p>
         <div class="voice-controls"><button type="button" id="chatTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Start recording</span></button><span id="chatTalkTimer" class="voice-timer">00:00</span></div>
         <div id="chatTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Ready when you are</span></div>
+        <canvas id="chatWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
       </section>
+      <div class="card"><h2>Quick replies</h2><p class="subtitle">One tap, nothing to type. Everyone in the convoy sees it.</p><div id="quickGrid" class="quick-grid"></div></div>
+      <div class="card"><h2>Convoy messages</h2><div id="quickLog"><p class="subtitle">No messages yet.</p></div></div>
       <div class="card"><h2>Received voice messages</h2><p class="subtitle">Audio messages received from convoy members appear in the voice message list on the Map tab.</p></div>
       <div class="notice">For safety, passengers should handle messages while the vehicle is moving.</div>
     </section>
@@ -357,6 +413,15 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
         <div class="metric"><label>On route</label><strong id="uonroute">—</strong></div>
         <div class="metric"><label>Largest gap</label><strong id="ugap">—</strong></div>
       </div>
+      <div class="metrics">
+        <div class="metric"><label>Separations</label><strong id="repSepCount">0</strong></div>
+        <div class="metric"><label>Longest</label><strong id="repLongest">—</strong></div>
+        <div class="metric"><label>Time stopped</label><strong id="repStopped">—</strong></div>
+      </div>
+      <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
+      <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
+      <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
       <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
@@ -366,7 +431,7 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
 </div>
 
 <section id="navigationScreen" hidden aria-label="Full-screen navigation">
-  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="closeNavigation" class="secondary">✕ Exit</button></header>
+  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="navSos" class="secondary">🆘</button><button id="navHalt" class="secondary">⏸ Stop</button><button id="closeNavigation" class="secondary">✕ Exit</button></header>
   <div class="nav-turn" aria-live="polite"><div class="turn-icon" id="navTurnIcon">↑</div><div class="turn-copy"><small id="navTurnLabel">NEXT MANEUVER</small><strong id="navInstruction">Finding your route…</strong><span id="navRoadName">Keep the convoy together</span></div><div class="turn-distance" id="navTurnDistance">—<small>TO TURN</small></div></div>
   <div class="nav-map-area"><div id="navMap"></div><div class="nav-map-badge">● <b id="navLiveCount">0 vehicles</b> · live convoy positions</div></div>
   <div class="nav-bottom"><div class="nav-bottom-head"><strong>Convoy locations</strong><span>Tap a driver to focus map</span></div><div id="navConvoy" class="nav-convoy"></div><div class="nav-bottom-head" style="margin-top:4px"><strong>Upcoming directions</strong><span id="navStepsCount">Turn-by-turn</span></div><div id="navNextSteps" class="nav-next-list"></div><div class="nav-note" id="navNotice">Directions use the Open Source Routing Machine public demo service. Keep your eyes on the road and follow road signs.</div></div>
@@ -379,6 +444,7 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
   <button class="nav-btn" data-screen="summary"><span class="ico">▤</span>SUMMARY</button>
 </nav>
 
+<canvas id="confetti" aria-hidden="true"></canvas>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -425,6 +491,386 @@ function animateNumber(el,to,decimals=0,suffix=''){
   el._raf=requestAnimationFrame(step);
 }
 
+// ===== NEW: smart regroup points + "I'm stopping" =====
+let lastCars=[],regroupMarker=null,regroupBusy=false,regroupTarget=null,regroupTimer=null,myHalt=null,haltTotalMs=0,cumCache=null,cumFor=null;
+const regroupSeen={},halts={};
+const routeCoords=()=>Array.isArray(pendingTrip?.route)?pendingTrip.route:[];
+function nearestRouteIdx(pt){
+  const r=routeCoords();let best=-1,bd=Infinity;const k=Math.cos(pt[1]*Math.PI/180);
+  for(let i=0;i<r.length;i++){const dx=(r[i][0]-pt[0])*k,dy=r[i][1]-pt[1],d=dx*dx+dy*dy;if(d<bd){bd=d;best=i}}
+  return {idx:best,meters:Math.sqrt(bd)*111320};
+}
+function routeCum(){
+  const r=routeCoords();if(cumFor===r&&cumCache)return cumCache;
+  const c=[0];for(let i=1;i<r.length;i++)c.push(c[i-1]+navDistance(r[i-1],r[i])/1000);
+  cumCache=c;cumFor=r;return c;
+}
+const STOP_KIND={fuel:['⛽','Fuel station'],rest_area:['🛏️','Rest area'],services:['🅿️','Service area']};
+function clearRegroup(){
+  clearTimeout(regroupTimer);regroupTarget=null;
+  if(regroupMarker){regroupMarker.remove();regroupMarker=null}
+  $('regroupPanel').hidden=true;
+}
+async function suggestRegroup(a){
+  const key=a.id||a.name,now=Date.now();
+  if(regroupBusy||now-(regroupSeen[key]||0)<120000)return;
+  if(routeCoords().length<2||!map)return;
+  const placed=lastCars.filter(c=>Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat)))
+    .map(c=>({c,...nearestRouteIdx([Number(c.lon),Number(c.lat)])})).filter(p=>p.meters<2000);
+  if(placed.length<2)return;
+  const lag=placed.find(p=>p.c.id===a.id)||placed.find(p=>p.c.name===a.name)||placed.reduce((x,y)=>x.idx<y.idx?x:y);
+  const lead=placed.reduce((x,y)=>x.idx>y.idx?x:y);
+  if(lead.idx<=lag.idx)return;
+  regroupSeen[key]=now;regroupBusy=true;
+  $('regroupTitle').textContent='Finding a regroup point…';$('regroupDetail').replaceChildren(skeletonBlock(2));$('regroupPanel').hidden=false;
+  try{
+    await new Promise(r=>setTimeout(r,Math.random()*1500)); // spread load if several phones ask at once
+    const lat=Number(lead.c.lat),lon=Number(lead.c.lon),ar=`(around:12000,${lat},${lon})`;
+    const q=`[out:json][timeout:20];(nwr${ar}[amenity=fuel];nwr${ar}[highway=rest_area];nwr${ar}[highway=services];);out center tags;`;
+    const resp=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)});
+    if(!resp.ok)throw new Error('Overpass failed');
+    const data=await resp.json();
+    const cands=(data.elements||[]).map(el=>{
+      const la=Number(el.lat??el.center?.lat),lo=Number(el.lon??el.center?.lon);
+      if(!Number.isFinite(la)||!Number.isFinite(lo))return null;
+      const t=el.tags||{},kind=t.amenity==='fuel'?'fuel':t.highway==='rest_area'?'rest_area':'services';
+      const n=nearestRouteIdx([lo,la]);if(n.meters>1500)return null;
+      return {name:t.name||t.brand||STOP_KIND[kind][1],kind,lat:la,lon:lo,idx:n.idx};
+    }).filter(Boolean);
+    // Prefer a stop just ahead of the leader (nobody has to turn back); otherwise the closest stop between the two.
+    const ahead=cands.filter(s=>s.idx>=lead.idx).sort((x,y)=>x.idx-y.idx);
+    const between=cands.filter(s=>s.idx>lag.idx&&s.idx<lead.idx).sort((x,y)=>Math.abs(x.idx-lead.idx)-Math.abs(y.idx-lead.idx));
+    const stop=ahead[0]||between[0];
+    clearRegroup();
+    if(!stop){
+      $('regroupTitle').textContent='No rest area found nearby';
+      $('regroupDetail').textContent=`${a.name||'A driver'} is ${a.gapKm??'several'} km behind. No fuel stop or rest area was found along the next stretch. Pick a safe place to wait.`;
+      $('regroupPanel').hidden=false;return;
+    }
+    const cum=routeCum(),lagKm=Math.max(0,cum[stop.idx]-cum[lag.idx]),leadKm=Math.max(0,cum[stop.idx]-cum[lead.idx]);
+    const [icon,label]=STOP_KIND[stop.kind];
+    $('regroupTitle').textContent=`${icon} ${stop.name}`;
+    $('regroupDetail').textContent=`${label} on your route. ${lead.c.name||'The lead car'} is ${leadKm.toFixed(1)} km away; ${a.name||lag.c.name||'the car behind'} is ${lagKm.toFixed(1)} km away (about ${Math.max(1,Math.round(lagKm))} min at 60 km/h). Everyone can wait here.`;
+    $('regroupPanel').hidden=false;
+    const el=document.createElement('div');el.className='regroup-pin';el.textContent=icon+' Regroup';
+    regroupMarker=new maplibregl.Marker({element:el}).setLngLat([stop.lon,stop.lat]).addTo(map);
+    regroupTarget={lat:stop.lat,lon:stop.lon,lagId:lag.c.id};
+    regroupTimer=setTimeout(clearRegroup,600000);
+    announce(`Regroup suggested at ${stop.name}`,[200,100,200]);
+    showBanner(`<b>Suggested regroup: ${esc(stop.name)}</b>${leadKm.toFixed(1)} km ahead of the leader. Details are on the Map tab.`,'ok',9000);
+  }catch(e){
+    clearRegroup();showBanner('<b>Regroup suggestion failed</b>Could not look up nearby stops. Check your connection.','warn',5000);
+  }finally{regroupBusy=false}
+}
+function checkRegroupArrival(){
+  if(!regroupTarget)return;
+  const car=lastCars.find(c=>c.id===regroupTarget.lagId);
+  if(car&&Number.isFinite(Number(car.lon))&&navDistance([Number(car.lon),Number(car.lat)],[regroupTarget.lon,regroupTarget.lat])<400){
+    clearRegroup();showBanner('<b>Convoy regrouped</b>The last car reached the regroup point.','ok',5000);
+  }
+}
+$('regroupShow').onclick=()=>{showScreen('map');if(regroupTarget&&map)map.flyTo({center:[regroupTarget.lon,regroupTarget.lat],zoom:14,duration:700})};
+$('regroupDismiss').onclick=clearRegroup;
+
+const fmtMin=ms=>{const m=Math.round(Math.max(0,ms)/60000);return m<1?'<1 min':m+' min'};
+function updateHaltButtons(){
+  ['haltToggle','navHalt'].forEach(id=>{const b=$(id);if(!b)return;b.classList.toggle('halted',!!myHalt);b.textContent=myHalt?"▶ I'm moving again":(id==='navHalt'?'⏸ Stop':"⏸ I'm stopping")});
+}
+function renderHalts(){
+  const ids=Object.keys(halts),list=$('haltList');list.replaceChildren();
+  const longest=ids.reduce((m,id)=>Math.max(m,Date.now()-halts[id].at),0);
+  $('haltPanel').hidden=!ids.length&&!haltTotalMs;
+  $('haltSummary').textContent=`Convoy ETA delay so far: +${fmtMin(haltTotalMs+longest)}`;
+  ids.forEach(id=>{
+    const h=halts[id],row=document.createElement('div');row.className='halt-row';
+    const left=document.createElement('span'),b=document.createElement('b');b.textContent=id===socket.id?'You':h.name;
+    left.append(b,document.createTextNode(' stopped · '+fmtMin(Date.now()-h.at)));
+    const tag=document.createElement('span');tag.className='status behind';tag.textContent='ETA +'+fmtMin(Date.now()-h.at);
+    row.append(left,tag);list.appendChild(row);
+  });
+  Object.keys(markers).forEach(id=>markers[id].getElement().classList.toggle('halted',!!halts[id]));
+}
+function applyHalt(m){
+  if(!m||!m.id)return;
+  const mine=m.id===socket.id,who=mine?'You':esc(m.name||'A convoy member');
+  if(m.state==='stopped'){
+    if(halts[m.id])return;
+    halts[m.id]={name:m.name||'Driver',at:Date.now()};if(mine)myHalt=halts[m.id];
+    showBanner(`<b>${who} ${mine?'are':'is'} stopping</b>Convoy ETA delay is counting from now.`,'warn',8000);
+    if(!mine)announce(`${m.name||'A driver'} is stopping`,[200]);
+  }else if(m.state==='moving'){
+    const h=halts[m.id];if(!h)return;
+    const ms=Date.now()-h.at;haltTotalMs+=ms;delete halts[m.id];if(mine)myHalt=null;
+    showBanner(`<b>${who} back on the road</b>Stopped ${fmtMin(ms)}. Convoy ETA +${fmtMin(ms)}.`,'ok',7000);
+    if(!mine)announce(`${m.name||'A driver'} is moving again`,[120]);
+  }
+  updateHaltButtons();renderHalts();
+}
+function toggleHalt(){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  const payload={state:myHalt?'moving':'stopped',at:Date.now(),lat:lastGps?.lat,lon:lastGps?.lon};
+  let acked=false;
+  socket.emit('halt',payload,res=>{acked=true;if(!res||!res.ok)showBanner('<b>Halt not shared</b>'+esc(res?.error||'The server rejected it.'),'warn',6000)});
+  setTimeout(()=>{if(!acked)showBanner('<b>Others may not see this</b>The server has no halt handler yet. Add it to index.js.','warn',7000)},2500);
+  applyHalt({id:socket.id,name:session.name,...payload});
+}
+socket.on('halt',applyHalt);
+$('haltToggle').onclick=toggleHalt;$('navHalt').onclick=toggleHalt;
+setInterval(()=>{if(Object.keys(halts).length)renderHalts()},15000);
+
+// ===== NEW: real trip summary (separations, arrivals, stops) =====
+let summaryTimer=null;
+function mk(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+const fmtDur=ms=>{const s=Math.max(0,Math.round(ms/1000));if(s<60)return s+' s';const m=Math.floor(s/60);if(m<60)return m+' min';return Math.floor(m/60)+' h '+(m%60)+' min'};
+const fmtClock=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+function focusOn(lat,lon){showScreen('map');if(map)setTimeout(()=>map.flyTo({center:[lon,lat],zoom:14,duration:700}),120)}
+function reportRow(title,detail,tagText,tagClass,action){
+  const row=mk('div','row'),left=mk('div'),right=mk('div');
+  left.append(mk('b','',title),document.createElement('br'),mk('small','',detail));
+  right.append(mk('span','status '+tagClass,tagText));
+  if(action){const b=mk('button','secondary',action.label);b.style.cssText='display:block;margin:8px 0 0 auto;padding:7px 9px;font-size:11px';b.onclick=action.run;right.append(b)}
+  row.append(left,right);return row;
+}
+function renderSummary(s){
+  if(!s||typeof s!=='object')return;
+  lastSummary=s;
+  const totals=s.totals||{};
+  $('repSepCount').textContent=totals.separations||0;
+  $('repLongest').textContent=totals.longestMs?fmtDur(totals.longestMs):'—';
+  $('repStopped').textContent=totals.haltMs?fmtDur(totals.haltMs):'—';
+
+  const sepList=$('sepList');sepList.replaceChildren();
+  const seps=(Array.isArray(s.separations)?s.separations:[]).slice().reverse();
+  if(!seps.length)sepList.append(mk('p','subtitle','No one has gotten separated yet.'));
+  seps.forEach(e=>{
+    const ongoing=!e.endedAt;
+    let detail=`${fmtClock(e.startedAt)} · km ${e.atKm} of ${s.totalKm} · ${ongoing?'separated for ':'lasted '}${fmtDur(e.durationMs)}`;
+    if(e.type==='behind'&&e.maxGapKm)detail+=` · up to ${Number(e.maxGapKm).toFixed(1)} km behind`;
+    if(!ongoing&&e.endReason==='disconnected')detail+=' · lost signal';
+    else if(!ongoing&&e.type==='off-route'&&e.rejoinKm!=null)detail+=` · rejoined at km ${e.rejoinKm}`;
+    const action=Number.isFinite(e.lat)&&Number.isFinite(e.lon)?{label:'Show on map',run:()=>focusOn(e.lat,e.lon)}:null;
+    sepList.append(reportRow(`${e.name} · ${e.type==='off-route'?'Missed a turn':'Fell behind'}`,detail,ongoing?'Ongoing':'Resolved',ongoing?'off':'ok',action));
+  });
+
+  const arrList=$('arrivalList');arrList.replaceChildren();
+  const members=Array.isArray(s.members)?s.members:[];
+  const arrived=members.filter(m=>m.arrivedAt).sort((a,b)=>a.arrivedAt-b.arrivedAt),waiting=members.filter(m=>!m.arrivedAt);
+  if(!members.length)arrList.append(mk('p','subtitle','Waiting for drivers…'));
+  arrived.forEach((m,i)=>{
+    const after=i===0?'First to arrive':'+'+fmtDur(m.arrivedAt-arrived[0].arrivedAt)+' after the first car';
+    arrList.append(reportRow(`${i+1}. ${m.name}`,`Arrived ${fmtClock(m.arrivedAt)} · ${after}`,'Arrived','ok'));
+  });
+  waiting.forEach(m=>arrList.append(reportRow(m.name,m.online?'Still on the way':'Offline',m.online?'On the way':'Offline',m.online?'behind':'off')));
+
+  const haltList=$('haltHistory');haltList.replaceChildren();
+  const hs=(Array.isArray(s.halts)?s.halts:[]).slice().reverse();
+  if(!hs.length)haltList.append(mk('p','subtitle','No stops announced yet.'));
+  hs.forEach(h=>haltList.append(reportRow(h.name,`${fmtClock(h.startedAt)} · stopped for ${fmtDur(h.durationMs)}`,h.endedAt?'Done':'Stopped',h.endedAt?'ok':'behind')));
+}
+function requestSummary(){if(!session)return;socket.emit('get-summary',res=>{if(res&&res.ok)renderSummary(res.summary)})}
+socket.on('summary',renderSummary);
+function onSummaryScreen(active){clearInterval(summaryTimer);summaryTimer=null;if(active){requestSummary();summaryTimer=setInterval(requestSummary,10000)}}
+
+// ===== NEW: spoken + haptic alerts =====
+let alertsOn=true;
+try{alertsOn=localStorage.getItem('oneroute-alerts')!=='off'}catch{}
+function syncAlertsButton(){const b=$('alertsToggle');if(b){b.textContent=alertsOn?'🔊 Alerts: ON':'🔇 Alerts: OFF';b.classList.toggle('active',alertsOn)}}
+function announce(text,pattern){
+  if(!alertsOn)return;
+  try{if(pattern&&navigator.vibrate)navigator.vibrate(pattern)}catch{}
+  try{if('speechSynthesis' in window&&text){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=navigator.language||'en-IN';speechSynthesis.speak(u)}}catch{}
+}
+$('alertsToggle').onclick=()=>{alertsOn=!alertsOn;try{localStorage.setItem('oneroute-alerts',alertsOn?'on':'off')}catch{}syncAlertsButton();if(alertsOn)announce('Spoken alerts on',[80])};
+syncAlertsButton();
+const agoText=sec=>{const m=Math.floor(sec/60);return m<1?'just now':m<60?m+' min ago':Math.floor(m/60)+' h '+(m%60)+' min ago'};
+function skeletonBlock(n=3,cls=''){const f=document.createDocumentFragment();for(let i=0;i<n;i++)f.append(mk('div','skeleton '+cls));return f}
+
+// ===== NEW: SOS / breakdown =====
+const sosActive={},sosMarkers={};
+const mySos=()=>!!sosActive[socket.id];
+function renderSos(){
+  const ids=Object.keys(sosActive),list=$('sosList');list.replaceChildren();$('sosPanel').hidden=!ids.length;
+  ids.forEach(id=>{
+    const s=sosActive[id],mine=id===socket.id,hasPos=Number.isFinite(s.lat)&&Number.isFinite(s.lon);
+    const row=reportRow(`${mine?'You':s.name} · needs help`,`Sent ${fmtClock(s.at)}${hasPos?'':' · location unavailable'}`,'SOS','off',hasPos?{label:'Show on map',run:()=>focusOn(s.lat,s.lon)}:null);
+    if(mine){const b=mk('button','secondary','Cancel my SOS');b.style.cssText='display:block;margin:8px 0 0 auto;padding:7px 9px;font-size:11px';b.onclick=()=>sendSos('cleared');row.lastChild.append(b)}
+    list.append(row);
+  });
+  Object.keys(sosMarkers).forEach(id=>{if(!sosActive[id]){sosMarkers[id].remove();delete sosMarkers[id]}});
+  if(map)ids.forEach(id=>{
+    const s=sosActive[id];if(!Number.isFinite(s.lat)||!Number.isFinite(s.lon))return;
+    if(!sosMarkers[id])sosMarkers[id]=new maplibregl.Marker({element:mk('div','sos-pin','🆘 '+s.name)}).setLngLat([s.lon,s.lat]).addTo(map);
+  });
+  ['sosButton','navSos'].forEach(id=>{const b=$(id);if(b)b.classList.toggle('sos-on',mySos())});
+}
+function sendSos(state){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  if(state==='active'&&!confirm('Send an SOS with your location to everyone in the convoy?'))return;
+  socket.emit('sos',{state,lat:lastGps?.lat,lon:lastGps?.lon},res=>{if(!res||!res.ok)showBanner('<b>SOS not sent</b>'+esc(res?.error||'Try again.'),'warn',8000)});
+}
+const toggleSos=()=>sendSos(mySos()?'cleared':'active');
+$('sosButton').onclick=toggleSos;$('navSos').onclick=toggleSos;
+socket.on('sos',m=>{
+  if(!m||!m.id)return;
+  const mine=m.id===socket.id,who=mine?'You':esc(m.name||'A driver');
+  if(m.state==='active'){
+    sosActive[m.id]={name:m.name||'Driver',lat:m.lat==null?NaN:Number(m.lat),lon:m.lon==null?NaN:Number(m.lon),at:m.at||Date.now()};
+    showBanner(mine?'<b>SOS sent</b>Your position was shared with the convoy.':`<b>🆘 ${who} needs help</b>Open the Map tab to see where.`,'',15000);
+    if(!mine)announce(`S O S. ${m.name||'A driver'} needs help.`,[600,150,600,150,600]);
+  }else{
+    if(!sosActive[m.id])return;
+    delete sosActive[m.id];
+    showBanner(`<b>SOS cleared</b>${who} ${mine?'cancelled the':'is no longer asking for help.'}${mine?' SOS.':''}`,'ok',5000);
+  }
+  renderSos();
+});
+
+// ===== NEW: quick replies =====
+const QUICK=[['Need a break','☕'],['Fuel low','⛽'],['Slow down','🐢'],['On my way','🚗'],['Need to stop soon','🛑'],['All good','👍']];
+const quickLog=[];
+function renderQuickLog(){
+  const box=$('quickLog');box.replaceChildren();
+  if(!quickLog.length){box.append(mk('p','subtitle','No messages yet.'));return}
+  quickLog.slice().reverse().slice(0,20).forEach(m=>{
+    const emoji=(QUICK.find(q=>q[0]===m.text)||[])[1]||'';
+    const row=mk('div','row'),left=mk('div');
+    left.append(mk('b','',m.memberId===socket.id?'You':m.name),document.createElement('br'),mk('small','',`${emoji} ${m.text}`.trim()));
+    row.append(left,mk('small','',fmtClock(m.at)));box.append(row);
+  });
+}
+function sendQuick(text){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  socket.emit('quick-message',{text},res=>{
+    if(res&&res.ok)showBanner('<b>Sent</b>'+esc(text),'ok',2000);
+    else showBanner('<b>Not sent</b>'+esc(res?.error||'Try again.'),'warn',3500);
+  });
+}
+QUICK.forEach(([text,emoji])=>{const b=mk('button','',`${emoji} ${text}`);b.onclick=()=>sendQuick(text);$('quickGrid').append(b)});
+socket.on('quick-message',m=>{
+  if(!m)return;
+  quickLog.push(m);if(quickLog.length>30)quickLog.shift();renderQuickLog();
+  if(m.memberId!==socket.id){showBanner(`<b>${esc(m.name)}</b>${esc(m.text)}`,'warn',6000);announce(`${m.name}: ${m.text}`,[150,80,150])}
+});
+socket.on('quick-history',list=>{quickLog.length=0;(Array.isArray(list)?list:[]).forEach(m=>quickLog.push(m));renderQuickLog()});
+
+// ===== NEW: read-only live link =====
+$('shareLive').onclick=async()=>{
+  const token=pendingTrip?.viewToken;
+  if(!token){showBanner('<b>Live link unavailable</b>Update the server to the latest index.js first.','warn',5000);return}
+  const url=location.origin+'/live/'+token,text='Follow our convoy live (read-only): '+url;
+  try{
+    if(navigator.share)await navigator.share({title:'ONEROUTE live view',text,url});
+    else{await navigator.clipboard.writeText(url);showBanner('<b>Live link copied</b>Anyone with it can watch the convoy.','ok',5000)}
+  }catch(e){if(e.name!=='AbortError')window.prompt('Copy live link',url)}
+};
+
+// ===== NEW: voice waveform =====
+let waveCtx=null,waveRaf=0;
+function startWave(stream){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    waveCtx=new AC();const analyser=waveCtx.createAnalyser();analyser.fftSize=64;
+    waveCtx.createMediaStreamSource(stream).connect(analyser);
+    const data=new Uint8Array(analyser.frequencyBinCount),canvases=['mapWave','chatWave'].map($).filter(Boolean);
+    canvases.forEach(c=>c.classList.add('live'));
+    const draw=()=>{
+      analyser.getByteFrequencyData(data);
+      canvases.forEach(c=>{const g=c.getContext('2d'),bars=24,w=c.width/bars;g.clearRect(0,0,c.width,c.height);
+        for(let i=0;i<bars;i++){const v=data[Math.floor(i*data.length/bars)]/255,h=Math.max(3,v*c.height);g.fillStyle='#f4c430';g.fillRect(i*w+2,(c.height-h)/2,w-4,h)}});
+      waveRaf=requestAnimationFrame(draw);
+    };
+    draw();
+  }catch{}
+}
+function stopWave(){
+  cancelAnimationFrame(waveRaf);
+  if(waveCtx){waveCtx.close().catch(()=>{});waveCtx=null}
+  ['mapWave','chatWave'].forEach(id=>{const c=$(id);if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);c.classList.remove('live')}});
+}
+
+// ===== NEW: arrival confetti =====
+const confetti={parts:[],raf:0};
+function burstConfetti(n=120){
+  if(REDUCED)return;
+  const c=$('confetti');if(!c)return;c.width=innerWidth;c.height=innerHeight;const g=c.getContext('2d');
+  const colors=['#f4c430','#42c786','#6aa8ff','#f05b57','#f5f3eb'];
+  for(let i=0;i<n;i++)confetti.parts.push({x:innerWidth/2+(Math.random()-.5)*innerWidth*.4,y:innerHeight*.35,vx:(Math.random()-.5)*10,vy:-Math.random()*11-3,s:5+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:colors[i%colors.length],life:0});
+  if(confetti.raf)return;
+  const step=()=>{
+    g.clearRect(0,0,c.width,c.height);
+    confetti.parts=confetti.parts.filter(p=>p.life<220&&p.y<c.height+20);
+    confetti.parts.forEach(p=>{p.life++;p.vy+=.28;p.x+=p.vx;p.y+=p.vy;p.vx*=.99;p.r+=p.vr;g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.globalAlpha=Math.max(0,1-p.life/220);g.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);g.restore()});
+    if(confetti.parts.length)confetti.raf=requestAnimationFrame(step);else{confetti.raf=0;g.clearRect(0,0,c.width,c.height)}
+  };
+  confetti.raf=requestAnimationFrame(step);
+}
+let myArrivedShown=false,allArrivedShown=false;
+function checkArrivals(cars){
+  const me=cars.find(c=>c.id===socket.id),all=cars.length>1&&cars.every(c=>c.status==='arrived');
+  if(me&&me.status==='arrived'&&!myArrivedShown){myArrivedShown=true;burstConfetti(100);announce('You have arrived',[200,100,200]);showBanner('<b>You have arrived 🏁</b>Nice driving.','ok',6000)}
+  if(me&&me.status!=='arrived')myArrivedShown=false;
+  if(all&&!allArrivedShown){allArrivedShown=true;burstConfetti(220);announce('Everyone has arrived',[300,150,300]);showBanner('<b>Everyone has arrived 🎉</b>The whole convoy made it.','ok',9000)}
+  if(!all)allArrivedShown=false;
+}
+
+// ===== NEW: export trip report (image or PDF) =====
+let lastSummary=null;
+function buildReportCanvas(){
+  const s=lastSummary;if(!s)return null;
+  const W=1000,pad=40,lines=[];
+  const add=(t,o={})=>lines.push({t:String(t),size:o.size||20,color:o.color||'#f5f3eb',bold:!!o.bold,gap:o.gap??8});
+  const addWrapped=(t,o={},max=88)=>{const words=String(t).split(' ');let line='';words.forEach(w=>{if((line+' '+w).trim().length>max){add(line,{...o,gap:2});line=w}else line=(line+' '+w).trim()});if(line)add(line,o)};
+  const t=s.totals||{};
+  add('ONEROUTE · Trip report',{size:34,color:'#f4c430',bold:true,gap:12});
+  add('Destination: '+(pendingTrip?.destination?.label||'Destination'),{size:22,bold:true});
+  add('Generated '+new Date().toLocaleString()+' · '+s.totalKm+' km route',{size:16,color:'#9ca3af',gap:22});
+  add(`Separations: ${t.separations||0}    Longest: ${t.longestMs?fmtDur(t.longestMs):'-'}    Time stopped: ${t.haltMs?fmtDur(t.haltMs):'-'}`,{size:20,bold:true,gap:24});
+  add('Who got separated',{size:24,color:'#f4c430',bold:true,gap:10});
+  const seps=s.separations||[];
+  if(!seps.length)add('No one got separated.',{color:'#9ca3af',gap:18});
+  seps.forEach(e=>{
+    add(`${e.name} · ${e.type==='off-route'?'Missed a turn':'Fell behind'}${e.endedAt?'':' (ongoing)'}`,{bold:true,gap:3});
+    let d=`${fmtClock(e.startedAt)} · km ${e.atKm} of ${s.totalKm} · ${fmtDur(e.durationMs)}`;
+    if(e.type==='behind'&&e.maxGapKm)d+=` · up to ${Number(e.maxGapKm).toFixed(1)} km behind`;
+    if(e.endReason==='disconnected')d+=' · lost signal';else if(e.type==='off-route'&&e.rejoinKm!=null)d+=` · rejoined at km ${e.rejoinKm}`;
+    addWrapped(d,{size:16,color:'#b8c0cc',gap:14});
+  });
+  add('Arrivals',{size:24,color:'#f4c430',bold:true,gap:10});
+  const members=s.members||[],arrived=members.filter(m=>m.arrivedAt).sort((a,b)=>a.arrivedAt-b.arrivedAt);
+  arrived.forEach((m,i)=>add(`${i+1}. ${m.name} · ${fmtClock(m.arrivedAt)}${i?' · +'+fmtDur(m.arrivedAt-arrived[0].arrivedAt):' · first to arrive'}`,{gap:6}));
+  members.filter(m=>!m.arrivedAt).forEach(m=>add(`${m.name} · ${m.online?'still on the way':'offline'}`,{color:'#9ca3af',gap:6}));
+  if(!members.length)add('No drivers recorded.',{color:'#9ca3af'});
+  add('Stops',{size:24,color:'#f4c430',bold:true,gap:10});
+  const hs=s.halts||[];
+  if(!hs.length)add('No stops announced.',{color:'#9ca3af'});
+  hs.forEach(h=>add(`${h.name} · ${fmtClock(h.startedAt)} · ${fmtDur(h.durationMs)}`,{gap:6}));
+  let height=pad*2;lines.forEach(l=>height+=l.size*1.35+l.gap);
+  const c=document.createElement('canvas');c.width=W;c.height=Math.ceil(height);
+  const g=c.getContext('2d');g.fillStyle='#17191d';g.fillRect(0,0,W,c.height);
+  let y=pad;
+  lines.forEach(l=>{y+=l.size;g.font=`${l.bold?'700 ':''}${l.size}px system-ui,sans-serif`;g.fillStyle=l.color;g.fillText(l.t,pad,y,W-pad*2);y+=l.size*.35+l.gap});
+  return c;
+}
+function withFreshSummary(done){
+  if(!session){done();return}
+  let finished=false;const finish=()=>{if(!finished){finished=true;done()}};
+  setTimeout(finish,3000);
+  socket.emit('get-summary',res=>{if(res&&res.ok)renderSummary(res.summary);finish()});
+}
+$('reportPng').onclick=()=>withFreshSummary(()=>{
+  const c=buildReportCanvas();
+  if(!c){showBanner('<b>No report yet</b>Join a trip and wait for the first update.','warn',4000);return}
+  c.toBlob(blob=>{
+    if(!blob)return;
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='oneroute-trip-report.png';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  });
+});
+$('reportPdf').onclick=()=>withFreshSummary(()=>{
+  const old=document.title;document.title='ONEROUTE trip report';
+  window.print();setTimeout(()=>{document.title=old},1500);
+});
+
 // Voice messages: short audio recordings are relayed by the server to this trip.
 let voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceRecording=false,voiceTimer=null,voiceClockInterval=null,voiceStartedAt=0;
 const MAX_VOICE_MS=30000, MAX_AUDIO_BYTES=700000;
@@ -466,7 +912,7 @@ async function startVoiceRecording(){
       clearTimeout(voiceTimer);voiceTimer=null;clearInterval(voiceClockInterval);voiceClockInterval=null;
       const recorder=voiceRecorder;voiceRecorder=null;
       if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}
-      setVoiceButtons(false);
+      setVoiceButtons(false);stopWave();
       try{
         const blob=new Blob(voiceChunks,{type:recorder?.mimeType||'audio/webm'});voiceChunks=[];
         if(!blob.size){setVoiceStatus('No audio captured. Try again.');return}
@@ -481,7 +927,7 @@ async function startVoiceRecording(){
         };reader.onerror=()=>setVoiceStatus('Could not read the recording.');reader.readAsDataURL(blob);
       }catch(error){setVoiceStatus('Could not send the recording. Please try again.')}
     };
-    voiceRecorder.start();voiceRecording=true;setVoiceButtons(true);setVoiceStatus('Recording… speak clearly. Tap Stop when finished.');
+    startWave(voiceStream);voiceRecorder.start();voiceRecording=true;setVoiceButtons(true);setVoiceStatus('Recording… speak clearly. Tap Stop when finished.');
     voiceTimer=setTimeout(()=>stopVoiceRecording(),MAX_VOICE_MS);
   }catch(error){if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}setVoiceStatus(error?.name==='NotAllowedError'?'Microphone permission denied. Allow microphone access and try again.':'Could not access the microphone. Check browser permissions and HTTPS.');}
 }
@@ -504,16 +950,16 @@ function geoError(e){
 }
 $('search').onclick=async()=>{
   const q=$('dest').value.trim();if(!q)return setMsg('Enter a destination.');
-  setMsg('Searching…');$('results').innerHTML='';chosen=null;
+  setMsg('Searching…');$('results').replaceChildren(skeletonBlock(3));chosen=null;
   try{
     const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();
-    const list=await r.json();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
+    const list=await r.json();$('results').replaceChildren();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
     list.forEach(place=>{
       const b=document.createElement('button');b.textContent=place.label;
       b.onclick=()=>{chosen=place;[...$('results').children].forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
       $('results').appendChild(b);
     });
-  }catch{setMsg('Search failed. Check your internet and server.')}
+  }catch{$('results').replaceChildren();setMsg('Search failed. Check your internet and server.')}
 };
 $('dest').addEventListener('keydown',e=>{if(e.key==='Enter')$('search').click()});
 $('code').addEventListener('input',()=>{$('code').value=$('code').value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
@@ -552,7 +998,7 @@ function drawPlannerRoute(){
   const bounds=new maplibregl.LngLatBounds(coords[0],coords[0]);coords.forEach(c=>bounds.extend(c));plannerMap.fitBounds(bounds,{padding:45,duration:0});
 }
 function renderPlannerStops(){const list=$('plannerStops');list.replaceChildren();plannedWaypoints.forEach((w,i)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('span');label.textContent=`${i+1}. ${w.label||w.name||'Waypoint'}`;const b=document.createElement('button');b.className='remove-stop';b.textContent='Remove';b.onclick=()=>{plannedWaypoints.splice(i,1);renderPlannerStops();drawPlannerRoute()};row.append(label,b);list.appendChild(row)});if(!plannedWaypoints.length){const p=document.createElement('p');p.className='subtitle';p.textContent='No stops added yet.';list.appendChild(p)}}
-$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren();try{const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();const results=await r.json();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
+$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren(skeletonBlock(3));try{const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();const results=await r.json();$('waypointResults').replaceChildren();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('waypointResults').replaceChildren();$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
 $('waypointSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchWaypoint').click()});
 $('backToSetup').onclick=()=>{$('planner').hidden=true;$('setup').hidden=false;if(plannerMap){plannerMap.remove();plannerMap=null}};
 $('editWaypoints').onclick=()=>{if(!pendingTrip){showBanner('<b>Route editing</b>Create a trip first to edit stops.','warn',5000);return}$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap.resize(),80)};
@@ -603,6 +1049,7 @@ function startApp(res){
     }
   });
   startSharing();showScreen('map');
+  Object.keys(sosMarkers).forEach(id=>{sosMarkers[id].remove();delete sosMarkers[id]});renderSos();
 }
 
 // Full-screen navigation: uses OSRM turn instructions and mirrors the live Socket.IO convoy.
@@ -613,7 +1060,7 @@ function navManeuverIcon(type,modifier){if(type==='turn'||type==='end of road'||
 function navManeuverText(step){const m=step?.maneuver||{},type=m.type||'continue',mod=m.modifier||'';if(type==='depart')return 'Start driving';if(type==='arrive')return 'You have arrived';if(type==='roundabout'||type==='rotary')return 'Enter the roundabout'+(mod?' and '+mod:'');if(type==='merge')return 'Merge'+(mod?' '+mod:'');if(type==='fork')return 'Keep '+(mod||'straight');if(type==='end of road')return 'At the end of the road, turn '+(mod||'ahead');if(type==='turn')return (mod==='slight left'?'Turn slightly left':mod==='slight right'?'Turn slightly right':mod==='sharp left'?'Turn sharp left':mod==='sharp right'?'Turn sharp right':mod==='uturn'?'Make a U-turn':mod==='left'?'Turn left':mod==='right'?'Turn right':'Continue');if(type==='arrive')return 'You have arrived';return 'Continue straight';}
 function navEnsureMap(){if(navMap)return;navMap=new maplibregl.Map({container:'navMap',center:lastGps?[lastGps.lon,lastGps.lat]:(pendingTrip?.route?.[0]||[77.6,13]),zoom:15,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});navMap.addControl(new maplibregl.NavigationControl(),'top-right');navMap.on('load',()=>{navDrawRoute();navRenderCars();});}
 function navDrawRoute(){if(!navMap||!navMap.isStyleLoaded()||navRouteCoords.length<2)return;const data={type:'Feature',geometry:{type:'LineString',coordinates:navRouteCoords},properties:{}};if(navMap.getSource('nav-route'))navMap.getSource('nav-route').setData(data);else{navMap.addSource('nav-route',{type:'geojson',data});navMap.addLayer({id:'nav-route-casing',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#17191d','line-width':10}});navMap.addLayer({id:'nav-route-line',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#f4c430','line-width':6}});}const bounds=new maplibregl.LngLatBounds(navRouteCoords[0],navRouteCoords[0]);navRouteCoords.forEach(c=>bounds.extend(c));navMap.fitBounds(bounds,{padding:{top:105,bottom:95,left:40,right:40},maxZoom:16,duration:500});}
-async function navFetchDirections(){const dest=navDestination();if(!dest||!Number.isFinite(Number(dest.lon))||!Number.isFinite(Number(dest.lat))){$('navInstruction').textContent='Destination coordinates unavailable';$('navRoadName').textContent='Choose a destination and start a trip first.';return;}if(!lastGps){$('navInstruction').textContent='Waiting for your GPS location';$('navRoadName').textContent='Allow location access to calculate turn-by-turn directions.';return;}const requestId=++navRouteRequest;$('navInstruction').textContent='Calculating directions…';$('navRoadName').textContent='Fetching driving route';try{const start=`${lastGps.lon},${lastGps.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url);if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navStepIndex=0;navLastRouteAt=Date.now();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){if(requestId!==navRouteRequest)return;$('navInstruction').textContent='Turn-by-turn unavailable';$('navRoadName').textContent='Check internet access. The shared convoy map remains available.';$('navNotice').textContent='The routing service could not return directions. Try again when connected.';}}
+async function navFetchDirections(){const dest=navDestination();if(!dest||!Number.isFinite(Number(dest.lon))||!Number.isFinite(Number(dest.lat))){$('navInstruction').textContent='Destination coordinates unavailable';$('navRoadName').textContent='Choose a destination and start a trip first.';return;}if(!lastGps){$('navInstruction').textContent='Waiting for your GPS location';$('navRoadName').textContent='Allow location access to calculate turn-by-turn directions.';return;}const requestId=++navRouteRequest;$('navInstruction').textContent='Calculating directions…';$('navRoadName').textContent='Fetching driving route';$('navNextSteps').replaceChildren(skeletonBlock(3,'chip'));try{const start=`${lastGps.lon},${lastGps.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url);if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navStepIndex=0;navLastRouteAt=Date.now();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){if(requestId!==navRouteRequest)return;$('navNextSteps').replaceChildren();$('navInstruction').textContent='Turn-by-turn unavailable';$('navRoadName').textContent='Check internet access. The shared convoy map remains available.';$('navNotice').textContent='The routing service could not return directions. Try again when connected.';}}
 function navUpdateInstruction(){if(!navOpen||!navStepsCountExists())return;const pos=lastGps?[lastGps.lon,lastGps.lat]:null;if(!navRouteSteps.length){$('navTurnIcon').textContent='↑';$('navTurnLabel').textContent='NAVIGATION';$('navTurnDistance').innerHTML='—<small>TO TURN</small>';$('navNextSteps').innerHTML='<div class="nav-step-chip">Directions will appear once a route is available.</div>';return;}if(pos){let best=navStepIndex,bestDist=Infinity;for(let i=Math.max(0,navStepIndex);i<Math.min(navRouteSteps.length,navStepIndex+4);i++){const loc=navRouteSteps[i].maneuver?.location;if(!loc)continue;const d=navDistance(pos,loc);if(d<bestDist){bestDist=d;best=i;}}if(bestDist<65&&best<navRouteSteps.length-1)navStepIndex=Math.max(navStepIndex,best+1);}
 const step=navRouteSteps[Math.min(navStepIndex,navRouteSteps.length-1)],maneuver=step.maneuver||{},loc=maneuver.location;let meters=loc&&pos?navDistance(pos,loc):Number(step.distance)||0;const text=navManeuverText(step);$('navTurnIcon').textContent=navManeuverIcon(maneuver.type,maneuver.modifier);$('navTurnLabel').textContent=navStepIndex===0?'FIRST MANEUVER':'NEXT MANEUVER';$('navInstruction').textContent=text;$('navRoadName').textContent=step.name?`onto ${step.name}`:(maneuver.type==='arrive'?'Destination reached':'Follow the highlighted route');$('navTurnDistance').innerHTML=navFormatDistance(meters)+'<small>TO TURN</small>';
 const upcoming=navRouteSteps.slice(navStepIndex+1,navStepIndex+5);$('navStepsCount').textContent=`${upcoming.length} after this`; $('navNextSteps').innerHTML=upcoming.map((st,i)=>`<div class="nav-step-chip"><b>${navManeuverIcon(st.maneuver?.type,st.maneuver?.modifier)}</b>${navManeuverText(st)}${st.name?' · '+esc(st.name):''}<br><span style="color:#9ca3af">${navFormatDistance(st.distance)}</span></div>`).join('')||'<div class="nav-step-chip">Final maneuver</div>';}
@@ -692,6 +1139,7 @@ function showScreen(which){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+which));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===which));
   if(which==='map'&&map)setTimeout(()=>map.resize(),80);
+  onSummaryScreen(which==='summary');
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('follow').onclick=()=>{$('follow').textContent='Follow: '+((follow=!follow)?'ON':'OFF')};
@@ -709,7 +1157,7 @@ socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
 
 socket.on('cars',cars=>{
   if(!Array.isArray(cars))return;
-  navCars=cars.slice();
+  navCars=cars.slice();lastCars=cars.slice();
   if(navOpen){navRenderCars();navUpdateInstruction();}
   if(!map)return;
   const bounds=new maplibregl.LngLatBounds(),seen=new Set();
@@ -731,10 +1179,16 @@ socket.on('cars',cars=>{
       pinEl.style.background=COLORS[c.status]||COLORS.offline;
       // NEW: ripple ring on off-route drivers
       pinEl.classList.toggle('alert',c.status==='off');
+      pinEl.classList.toggle('halted',!!halts[c.id]);
+      const stale=c.status==='offline';pinEl.classList.toggle('stale',stale);
+      let seenTag=pinEl.querySelector('.seen-tag');
+      if(stale&&Number.isFinite(Number(c.silentSec))){if(!seenTag){seenTag=document.createElement('span');seenTag.className='seen-tag';pinEl.appendChild(seenTag)}seenTag.textContent='no signal · '+agoText(Number(c.silentSec))}
+      else if(seenTag)seenTag.remove();
       bounds.extend([c.lon,c.lat]);
     }
     const status=c.status||'offline',gap=Number(c.gapKm);
     let detail=LABEL[status]||status;
+    if(status==='offline'&&Number.isFinite(Number(c.silentSec)))detail='No signal · last seen '+agoText(Number(c.silentSec));
     if(Number.isFinite(gap)&&gap>0)detail=gap.toFixed(1)+' km behind';
     if(c.etaMin!==null&&c.etaMin!==undefined)detail+=' · '+c.etaMin+' min';
     const row=`<div class="row"><div class="person"><div class="avatar">${esc(String(c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name||'Driver')}${c.id===socket.id?' (you)':''}</b><br><small>${esc(detail)}</small></div></div><span class="status ${esc(status)}">${esc(LABEL[status]||status)}</span></div>`;
@@ -742,6 +1196,8 @@ socket.on('cars',cars=>{
   });
   Object.keys(markers).forEach(id=>{if(!seen.has(id)){cancelAnimationFrame(glides.get(id));markers[id].remove();delete markers[id]}});
   if(follow&&cars.length&&!bounds.isEmpty())map.fitBounds(bounds,{padding:100,maxZoom:15,duration:500});
+  Object.keys(halts).forEach(id=>{if(id!==socket.id&&!seen.has(id))delete halts[id]});
+  checkRegroupArrival();renderHalts();checkArrivals(cars);
   // NEW: animated count-up for the metrics
   ['memberCount','smembers','umembers'].forEach(id=>animateNumber($(id),cars.length));
   ['onroute','sonroute','uonroute'].forEach(id=>animateNumber($(id),on));
@@ -755,6 +1211,7 @@ socket.on('alert',a=>{
     const r=a.rejoin;
     showBanner(`<b>${who} missed a turn</b>${Number(a.offMeters)||0} m off route.`+
       (r?`<br>Suggested: ${esc(r.kind)} at km ${esc(r.km)}.`:''),'warn',10000);
+    announce(`${a.id===socket.id?'You':(a.name||'A driver')} missed a turn`,[300,100,300]);
     if(rejoinMarker)rejoinMarker.remove();rejoinMarker=null;
     if(r&&map&&Array.isArray(r.point)){
       const el=document.createElement('div');el.className='rejoin';el.textContent='Rejoin here';
@@ -762,9 +1219,12 @@ socket.on('alert',a=>{
     }
   }else if(a.type==='rejoined'){
     showBanner(`<b>${who} is back on route</b>Convoy whole again.`,'ok',5000);
+    announce(`${a.id===socket.id?'You are':(a.name||'A driver')+' is'} back on route`,[120]);
     if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}
   }else if(a.type==='gap'){
     showBanner(`<b>${esc(a.name)} is ${esc(a.gapKm)} km behind</b>The convoy is spreading out.`,'warn',8000);
+    announce(`${a.name||'A driver'} is ${a.gapKm} kilometres behind`,[250,100,250]);
+    suggestRegroup(a);
   }
 });
 async function shareInvite(){
