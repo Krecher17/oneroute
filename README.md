@@ -6,7 +6,7 @@
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io)
 [![Android](https://img.shields.io/badge/Android-Capacitor_7-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://capacitorjs.com)
 [![MapLibre](https://img.shields.io/badge/MapLibre_GL-Vector_Maps-0085FF?style=for-the-badge&logo=maplibre&logoColor=white)](https://maplibre.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![License: Restricted](https://img.shields.io/badge/License-Restricted_Source--Available-red.svg?style=for-the-badge)](LICENSE)
 
 ---
 
@@ -203,6 +203,12 @@ The server can be configured via environment variables (or a `.env` file):
 
 ---
 
-## 📄 License
+## 📄 License & Access
 
-This project is open-source and licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 **Akshay Shankar (Krecher17)**. All rights reserved.
+
+This project is protected under a **Restricted Source-Available License**.
+* ✅ **Permitted:** Viewing, personal testing, academic/educational study, and portfolio evaluation.
+* ❌ **Prohibited:** Commercial use, commercial hosting/SaaS deployments, re-distribution, or creating closed/re-branded derivative works without explicit written permission.
+
+For full terms, see the [LICENSE](LICENSE) file. For licensing or partnership inquiries, contact: **akshayshankar017@gmail.com**.

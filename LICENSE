@@ -1,21 +1,31 @@
-MIT License
+RESTRICTED SOURCE-AVAILABLE LICENSE
 
-Copyright (c) 2026 Akshay Shankar (Krecher17)
+Copyright (c) 2026 Akshay Shankar (Krecher17). All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+PREAMBLE
+This software and associated documentation files (the "Software") are made available strictly for viewing, educational study, and non-commercial personal evaluation.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+TERMS AND CONDITIONS
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. PERMITTED USES
+Subject to the terms of this License, you may:
+   a. Clone, download, and review the source code for personal, academic, or portfolio evaluation purposes.
+   b. Run and test the Software locally on your own devices strictly for non-commercial, personal, and experimental use.
+
+2. RESTRICTIONS
+You may NOT, without prior written authorization from the copyright holder:
+   a. Commercial Use: Use, integrate, deploy, or exploit the Software (or any portion or derivative work thereof) for any commercial purpose, revenue-generating activity, business enterprise, or paid service.
+   b. Public Hosting & SaaS: Host, operate, or offer the Software as a public web service, Software-as-a-Service (SaaS), mobile app store release, or cloud-hosted solution.
+   c. Redistribution: Sell, rent, lease, sublicense, distribute, publish, or publicly re-host the source code or compiled packages, in whole or in part.
+   d. Derivative Works: Create, publish, or distribute modified, re-branded, or derivative works based on this Software for public or commercial circulation.
+
+3. RESERVATION OF RIGHTS
+All rights, title, and interest in and to the Software, including all intellectual property rights therein, are and will remain the exclusive property of Akshay Shankar (Krecher17). No implied licenses or rights are granted under this License.
+
+4. INQUIRIES & COMMERCIAL LICENSING
+For licensing inquiries, commercial permissions, or partnership opportunities, contact:
+   Email: akshayshankar017@gmail.com
+   GitHub: https://github.com/Krecher17
+
+5. DISCLAIMER OF WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
