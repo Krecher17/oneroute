@@ -120,7 +120,7 @@ cd oneroute/server
 npm install
 ```
 
-### Running Locally
+### Running Locally (Server & Web Client)
 ```bash
 # Start the server
 node index.js
@@ -133,6 +133,28 @@ Open your browser and navigate to:
 ```text
 http://localhost:3001
 ```
+
+### Running the Android Mobile App
+The repository includes an installable Android app located in `mobile/`, powered by Capacitor 7.
+
+**Prerequisites:**
+* JDK 21
+* Android Studio / Android SDK
+
+```bash
+# Move into the mobile directory
+cd ../mobile
+
+# Install dependencies and sync native Android project
+npm install
+npx cap sync android
+
+# Run on a connected Android phone or emulator
+npx cap run android
+# Or open in Android Studio:
+npx cap open android
+```
+
 
 ---
 

@@ -1,0 +1,19 @@
+{
+  "name": "oneroute-android-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Android shell for the existing ONEROUTE convoy application",
+  "scripts": {
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "android:run": "cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101820" />
+    <title>ONEROUTE</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" aria-labelledby="title">
+        <div class="brand-mark" aria-hidden="true">OR</div>
+        <p class="eyebrow">CONVOY SAFETY</p>
+        <h1 id="title">ONEROUTE</h1>
+        <p class="intro">
+          Your ONEROUTE website is ready to open in the Android app. The app
+          connects to your deployed site and keeps your existing server untouched.
+        </p>
+
+        <form id="connect-form">
+          <label for="server-url">ONEROUTE website</label>
+          <input
+            id="server-url"
+            name="server-url"
+            type="url"
+            inputmode="url"
+            autocomplete="url"
+            placeholder="https://oneroute.dpdns.org"
+            required
+          />
+          <p class="hint">
+            Deployed website: <code>https://oneroute.dpdns.org</code><br />
+            You can enter a local server URL for development if needed.
+          </p>
+          <button id="connect-button" type="submit">Open ONEROUTE</button>
+        </form>
+
+        <label class="remember">
+          <input id="remember-url" type="checkbox" checked />
+          Remember this server on this device
+        </label>
+
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+
+        <details>
+          <summary>Connection help</summary>
+          <ol>
+            <li>The default address is your deployed ONEROUTE website.</li>
+            <li>For local testing, the phone and computer must be on the same network.</li>
+            <li>Use the computer's LAN IP, not <code>localhost</code>, on a physical phone.</li>
+          </ol>
+        </details>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
