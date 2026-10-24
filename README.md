@@ -211,4 +211,4 @@ This project is protected under a **Restricted Source-Available License**.
 * ✅ **Permitted:** Viewing, personal testing, academic/educational study, and portfolio evaluation.
 * ❌ **Prohibited:** Commercial use, commercial hosting/SaaS deployments, re-distribution, or creating closed/re-branded derivative works without explicit written permission.
 
-For full terms, see the [LICENSE](LICENSE) file. For licensing or partnership inquiries, contact: **akshayshankar017@gmail.com**.
+For full terms, see the [LICENSE](LICENSE) file. For licensing or partnership inquiries, contact: **jiya.lenu@gmail.com**.
