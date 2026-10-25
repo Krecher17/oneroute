@@ -40,3 +40,7 @@ index-
 .DS_Store
 Thumbs.db
 
+
+# Server runtime data (users, sessions, avatars)
+server/data/
+**/server/data/

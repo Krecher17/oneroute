@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { makeRoute, snap } from './geo.js';
 import { fetchRoute, geocode } from './routing.js';
 import { bestRejoin } from './rejoin.js';
+import { registerAuthRoutes, requireAuth, authUserFromToken, avatarForUser } from './auth.js';
 
 // -------------------- Settings --------------------
 const PORT = process.env.PORT || 3001;
@@ -21,7 +22,7 @@ const MAX_WAYPOINTS = 20;
 
 // Voice-message settings
 const MAX_VOICE_MESSAGES = 50;
-const MAX_VOICE_LENGTH = 700000;
+const MAX_VOICE_LENGTH = 1000000;
 
 // Quick replies: only these exact messages are accepted
 const QUICK_MESSAGES = new Set([
@@ -35,6 +36,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+registerAuthRoutes(app); // /api/signup, /api/login, /api/me, /api/logout
 
 const trips = new Map(); // trip code -> trip data
 const viewTokens = new Map(); // read-only live-link token -> trip code
@@ -43,7 +45,7 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, name: 'Oneroute', trips: trips.size });
 });
 
-app.get('/geocode', async (req, res) => {
+app.get('/geocode', requireAuth, async (req, res) => {
   try {
     const query = String(req.query.q || '').trim();
     if (!query) return res.status(400).json({ error: 'Enter a place to search for.' });
@@ -113,9 +115,9 @@ function render(d){
   d.cars.forEach(function(c){
     seen[c.k]=1;
     if(typeof c.lon==='number'&&typeof c.lat==='number'){
-      if(!markers[c.k]){markers[c.k]=new maplibregl.Marker({element:el('div','pin',(c.name||'?').charAt(0).toUpperCase())}).setLngLat([c.lon,c.lat]).addTo(map)}
+      if(!markers[c.k]){var pe=el('div','pin',(c.name||'?').charAt(0).toUpperCase());if(c.avatar&&/^\/avatar\/[a-f0-9]{32}\.jpg$/.test(c.avatar)){pe.style.backgroundImage='url('+c.avatar+')';pe.style.backgroundSize='cover';pe.style.backgroundPosition='center';pe.style.color='transparent';pe.setAttribute('data-photo','1')}markers[c.k]=new maplibregl.Marker({element:pe}).setLngLat([c.lon,c.lat]).addTo(map)}
       markers[c.k].setLngLat([c.lon,c.lat]);
-      markers[c.k].getElement().style.background=COLORS[c.status]||COLORS.offline;
+      var pk=markers[c.k].getElement();if(pk.getAttribute('data-photo'))pk.style.borderColor=COLORS[c.status]||COLORS.offline;else pk.style.background=COLORS[c.status]||COLORS.offline;
       pts.push([c.lon,c.lat]);
     }
     var row=el('div','row'),left=el('div');
@@ -169,7 +171,7 @@ app.get('/api/live/:token', liveLimiter, (req, res) => {
     route: req.query.route === '1' ? trip.route.coords : undefined,
     cars: (trip.lastReport || []).map((c) => ({
       k: crypto.createHash('sha1').update(String(c.id)).digest('hex').slice(0, 8),
-      name: c.name, lat: c.lat, lon: c.lon, status: c.status,
+      name: c.name, avatar: c.avatar || null, lat: c.lat, lon: c.lon, status: c.status,
       gapKm: c.gapKm, etaMin: c.etaMin, silentSec: c.silentSec, halted: c.halted,
     })),
     sos,
@@ -180,6 +182,14 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
   maxHttpBufferSize: 2_000_000,
+});
+
+// Only signed-in people can connect. The page sends its saved login token with the connection.
+io.use((socket, next) => {
+  const user = authUserFromToken(socket.handshake.auth?.token);
+  if (!user) return next(new Error('unauthorized'));
+  socket.data.user = user;
+  next();
 });
 
 function newCode() {
@@ -225,7 +235,7 @@ async function buildRoute(start, destination, waypoints = []) {
 }
 
 function addMember(trip, socket, name) {
-  const clean = String(name || 'Driver').trim().slice(0, 20) || 'Driver';
+  const clean = String(name || socket.data?.user?.name || 'Driver').trim().slice(0, 20) || 'Driver';
   // Replace an old disconnected entry if this driver rejoins with the same name.
   for (const [id, member] of trip.members) {
     if (!member.online && member.name === clean) {
@@ -239,6 +249,7 @@ function addMember(trip, socket, name) {
   trip.members.set(socket.id, {
     id: socket.id,
     name: clean,
+    avatar: avatarForUser(socket.data?.user?.id), // profile picture shown on the map instead of the first letter
     online: true,
     pos: null,
     history: [],
@@ -483,6 +494,7 @@ function tick() {
             return {
               id: member.id,
               name: member.name,
+              avatar: member.avatar || null,
               lon: member.pos[0],
               lat: member.pos[1],
               km: +member.snapKm.toFixed(2),
@@ -682,6 +694,7 @@ io.on('connection', (socket) => {
       }
 
       io.to(trip.code).emit('voice-message', message);
+      console.log(`[${trip.code}] voice from ${member.name}: ${Math.round(data.audio.length / 1024)} KB (${data.mimeType}), ${io.sockets.adapter.rooms.get(trip.code)?.size || 0} in room`);
       reply({ ok: true });
     } catch (error) {
       console.error('voice-message failed:', error);
