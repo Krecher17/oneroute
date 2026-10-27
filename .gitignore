@@ -44,3 +44,6 @@ Thumbs.db
 # Server runtime data (users, sessions, avatars)
 server/data/
 **/server/data/
+
+Untitled-*
+**/Untitled-*

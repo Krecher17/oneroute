@@ -129,11 +129,334 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
 @media(hover:none){.card:hover{transform:none;box-shadow:none}.card:hover::before{opacity:0}button:hover{box-shadow:none;filter:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
+
+/* Full-screen turn-by-turn convoy navigation */
+#navigationScreen{position:fixed;inset:0;z-index:1000;background:#101216;color:#f5f3eb;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+#navigationScreen[hidden]{display:none!important}.navtop{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#1d2025;border-bottom:1px solid #393e48;z-index:3}.navtop .brand{font-size:16px;white-space:nowrap}.navtop .navdest{min-width:0;flex:1}.navdest strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.navdest small{font-size:11px}.navtop button{padding:9px 12px;white-space:nowrap}.nav-turn{display:flex;align-items:center;gap:14px;background:#f4c430;color:#17191d;padding:14px 16px;z-index:2;box-shadow:0 6px 20px #0005}.turn-icon{font-size:35px;font-weight:950;line-height:1;min-width:42px;text-align:center}.turn-copy{min-width:0;flex:1}.turn-copy small{display:block;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;opacity:.75}.turn-copy strong{display:block;font-size:19px;line-height:1.2;margin-top:3px}.turn-copy span{display:block;font-size:12px;margin-top:4px}.turn-distance{font-size:20px;font-weight:950;white-space:nowrap}.turn-distance small{display:block;font-size:10px;text-align:right}.nav-map-area{position:relative;flex:1;min-height:180px}#navMap{position:absolute;inset:0}.nav-map-badge{position:absolute;top:12px;left:12px;z-index:2;background:#17191de8;border:1px solid #ffffff25;border-radius:10px;padding:8px 10px;font-size:11px}.nav-map-badge b{color:var(--yellow)}.nav-bottom{max-height:33vh;overflow:auto;background:#1d2025;border-top:1px solid #393e48;padding:12px 14px calc(14px + env(safe-area-inset-bottom));}.nav-bottom-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.nav-bottom-head strong{font-size:13px}.nav-bottom-head span{font-size:11px;color:var(--muted)}.nav-convoy{display:flex;gap:8px;overflow-x:auto;padding:2px 0 9px}.nav-person{flex:0 0 auto;min-width:104px;border:1px solid #393e48;background:#252a32;border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:8px;color:white;text-align:left}.nav-person .mini-avatar{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;font-size:12px;font-weight:950;color:#17191d;flex-shrink:0}.nav-person b{display:block;font-size:11px;max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nav-person small{display:block;font-size:10px;color:#b8c0cc}.nav-person.me{border-color:var(--yellow)}.nav-next-list{display:flex;gap:8px;overflow:auto;padding-top:4px}.nav-step-chip{flex:0 0 auto;max-width:210px;border:1px solid #393e48;border-radius:10px;padding:8px 10px;font-size:11px;color:#d7dbe2}.nav-step-chip b{color:var(--yellow);margin-right:5px}.nav-note{font-size:11px;color:#aeb6c4;margin-top:8px;line-height:1.4}.nav-pin{width:30px;height:30px;border:2px solid #fff;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:950;color:#17191d;box-shadow:0 3px 12px #0009}.nav-pin.me{outline:3px solid var(--yellow)}
+@media(min-width:800px){.nav-bottom{max-height:27vh}.nav-turn{padding:18px 24px}.turn-copy strong{font-size:24px}}
+@media(max-width:480px){.navtop{gap:8px;padding:10px}.navtop .brand{font-size:13px}.navtop button{padding:9px;font-size:12px}.turn-icon{font-size:29px;min-width:32px}.turn-copy strong{font-size:17px}.turn-distance{font-size:17px}.nav-bottom{max-height:37vh}}
+
+
+/* Voice message controls */
+.voice-console{background:#202329;border:1px solid #454b56;border-radius:15px;padding:15px;margin:14px 0;color:var(--text)}
+.voice-console h2{margin:0 0 6px}.voice-console p{font-size:12px;color:var(--muted);line-height:1.5;margin:5px 0 12px}
+.voice-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.voice-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:170px;background:var(--yellow);color:#17191d;padding:13px 16px;border-radius:12px;font-weight:900}
+.voice-button.recording{background:#dc4545;color:#fff;animation:voicePulse 1.2s infinite}
+.voice-button-icon{font-size:18px}.voice-timer{font-variant-numeric:tabular-nums;font-weight:900;font-size:18px;color:var(--yellow)}
+.voice-status{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:12px;color:#b8c0cc;min-height:18px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#89919e;flex:0 0 8px}.voice-status.recording .status-dot{background:#f05252;box-shadow:0 0 0 4px #f0525226}.voice-status.success .status-dot{background:var(--green)}.voice-status.sending .status-dot{background:var(--yellow)}
+.voice-messages{display:grid;gap:10px;margin-top:12px}.voice-message{border:1px solid #3a404a;border-radius:12px;padding:12px;background:#191c21}.voice-message strong{display:block;font-size:13px}.voice-message small{display:block;color:var(--muted);font-size:11px;margin:4px 0 8px}.voice-message audio{display:block;width:100%;height:38px}
+@keyframes voicePulse{0%,100%{box-shadow:0 0 0 0 #dc454555}50%{box-shadow:0 0 0 7px #dc454500}}
+
+
+/* ===== Extra hover interactions: buttons, cards, map tools and voice controls ===== */
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .metric,.waypoints-panel,.waypoint-card,.voice-console,.voice-message,.quick-stop-menu,.nav-person,.nav-step-chip,.map-wrap{
+    transition:transform .22s var(--ease),border-color .22s ease,box-shadow .22s ease,background-color .22s ease;
+  }
+  .metric:hover{transform:translateY(-4px);border-color:rgba(244,196,48,.48);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+  .waypoints-panel:hover,.voice-console:hover{border-color:rgba(244,196,48,.4);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+  .waypoint-card:hover,.voice-message:hover{transform:translateY(-3px);border-color:rgba(244,196,48,.48);background:#20242b;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+  .map-wrap:hover{border-color:#57503a;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+  .map-tools button:hover,.quick-stop-menu button:hover,.navtop button:hover{transform:translateY(-3px) scale(1.025);border-color:var(--yellow);background:#34302a;color:#fff;box-shadow:0 7px 18px rgba(244,196,48,.18)}
+  .nav-person:hover,.nav-step-chip:hover{transform:translateY(-3px);border-color:var(--yellow);background:#30333a;box-shadow:0 7px 18px rgba(0,0,0,.22)}
+  .voice-button:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 8px 24px rgba(244,196,48,.25);filter:brightness(1.06)}
+  .voice-button.recording:hover{background:#f05252;box-shadow:0 8px 24px rgba(240,82,82,.24)}
+  .avatar:hover,.waypoint-icon:hover{transform:rotate(-4deg) scale(1.06);transition:transform .2s var(--ease)}
+  .brand{transition:text-shadow .25s ease,color .25s ease}
+  .brand:hover{text-shadow:0 0 25px rgba(244,196,48,.42)}
+}
+@media (hover:none){.metric:hover,.waypoints-panel:hover,.waypoint-card:hover,.voice-console:hover,.voice-message:hover,.map-wrap:hover,.map-tools button:hover,.quick-stop-menu button:hover,.navtop button:hover,.nav-person:hover,.nav-step-chip:hover,.voice-button:hover{transform:none}}
+
+
+
+/* ONEROUTE motion pass: gentle, purposeful motion */
+:root{--motion-ease:cubic-bezier(.2,.75,.25,1)}
+body{animation:pageFadeIn .55s var(--motion-ease) both}
+.hero,.setup-card,.panel,.metric,.waypoints-panel,.voice-console{animation:contentRise .55s var(--motion-ease) both}
+.hero{animation-delay:.04s}.setup-card{animation-delay:.08s}.metric:nth-child(2){animation-delay:.06s}.metric:nth-child(3){animation-delay:.12s}
+.map-wrap{transform-origin:center;animation:mapReveal .65s var(--motion-ease) both}
+.bottom-nav{animation:navRise .45s .15s var(--motion-ease) both}
+.bottom-nav .nav-btn .nav-icon,.nav-btn svg{transition:transform .25s var(--motion-ease),filter .25s ease}
+.bottom-nav .nav-btn:hover .nav-icon,.nav-btn:hover svg{transform:translateY(-2px) scale(1.12);filter:drop-shadow(0 0 6px rgba(244,196,48,.35))}
+button,.button,.nav-btn,.metric,.waypoint-card,.voice-console,.voice-message,.nav-person,.nav-step-chip{transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease,background-color .22s ease,filter .22s ease}
+button:active,.button:active,.nav-btn:active{transform:scale(.97)}
+#banner{animation:bannerSlide .35s var(--motion-ease) both}
+.pin{animation:pinPop .35s var(--motion-ease) both}
+.voice-button.recording{animation:recordGlow 1.35s ease-in-out infinite}
+#navigationScreen:not([hidden]) .nav-turn{animation:turnCardIn .35s var(--motion-ease) both}
+#navigationScreen:not([hidden]) .navtop{animation:navRise .3s var(--motion-ease) both}
+#navigationScreen:not([hidden]) .nav-step-chip{animation:contentRise .35s var(--motion-ease) both}
+@keyframes pageFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes contentRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mapReveal{from{opacity:.65;transform:scale(.985)}to{opacity:1;transform:scale(1)}}
+@keyframes navRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bannerSlide{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes pinPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+@keyframes turnCardIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes recordGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,82,82,.18)}50%{box-shadow:0 0 0 7px rgba(240,82,82,0)}}
+@media(prefers-reduced-motion:reduce){body,.hero,.setup-card,.panel,.metric,.waypoints-panel,.voice-console,.map-wrap,.bottom-nav,#banner,.pin,#navigationScreen:not([hidden]) .nav-turn,#navigationScreen:not([hidden]) .navtop,#navigationScreen:not([hidden]) .nav-step-chip{animation:none!important}button,.button,.nav-btn,.metric,.waypoint-card,.voice-console,.voice-message,.nav-person,.nav-step-chip{transition:none!important}}
+
+
+/* ===== NEW EFFECTS ===== */
+
+/* Map markers: MapLibre positions each marker with an inline transform, so CSS
+   animations/transitions that touch `transform` on the marker element itself
+   would fight it. Marker effects below use pseudo-elements and the separate
+   `translate` property instead. */
+.pin{animation:none!important;transition:box-shadow .2s ease}
+.pin:hover{transform:none;box-shadow:0 0 0 6px rgba(244,196,48,.16),0 4px 16px rgba(0,0,0,.4)}
+
+/* 1. Ripple ring on your own pin and on any off-route pin */
+.pin.me::after,.pin.alert::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--yellow);pointer-events:none;animation:ripple 1.8s ease-out infinite}
+.pin.alert::after{border-color:var(--red);animation-duration:1.2s}
+@keyframes ripple{from{transform:scale(1);opacity:.85}to{transform:scale(2.5);opacity:0}}
+
+/* 2. Bouncing "Rejoin here" tag (uses `translate`, not `transform`) */
+.rejoin{animation:bob 1s ease-in-out infinite}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 -6px}}
+
+/* 3. Shimmer on the hero highlight text */
+.hero h1 span{background:linear-gradient(90deg,#f4c430,#fff3b0,#f4c430);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important;animation:shine 3s linear infinite}
+@keyframes shine{to{background-position:200% center}}
+
+/* 6. Screen transitions */
+.screen.active{animation:screenIn .35s var(--motion-ease) both}
+@keyframes screenIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+
+@media(prefers-reduced-motion:reduce){
+  .pin.me::after,.pin.alert::after{animation:none;opacity:.5;transform:scale(1.4)}
+  .rejoin,.hero h1 span,.screen.active{animation:none!important}
+}
+
+/* ===== Smart regroup + "I'm stopping" ===== */
+.regroup-panel,.halt-panel{margin-top:18px;background:#1d2025;border:1px solid var(--line);border-radius:18px;padding:16px}
+.regroup-panel{border-color:#5d4e1d}
+.regroup-panel h2{margin:4px 0 6px}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.regroup-pin{background:#1b57a6;color:#fff;border:2px solid #fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900;box-shadow:0 3px 12px #0009;white-space:nowrap}
+.halt-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.halt-row:first-of-type{border-top:0}
+.halt-row b{color:var(--orange)}
+.map-tools button.halted,.navtop button.halted{background:var(--orange);color:#17191d;border-color:var(--orange)}
+.pin.halted{border-color:var(--orange)}
+.pin.halted::before{content:"⏸";position:absolute;top:-10px;right:-10px;width:18px;height:18px;border-radius:50%;background:var(--orange);color:#17191d;font-size:10px;display:grid;place-items:center}
+/* ===== Alerts, SOS, quick replies, waveform, skeletons, confetti, print ===== */
+.map-tools{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 28px)}
+.map-tools button.sos-on,.navtop button.sos-on{background:var(--red);color:#fff;border-color:var(--red)}
+.sos-panel{margin-top:18px;background:#2a1f1f;border:1px solid #6b2f2c;border-radius:18px;padding:16px}
+.sos-panel h2{margin:0 0 6px}
+.sos-pin{background:var(--red);color:#fff;border:2px solid #fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:900;box-shadow:0 3px 12px #0009;white-space:nowrap;animation:sosBlink 1s ease-in-out infinite}
+@keyframes sosBlink{50%{opacity:.55}}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.quick-grid button{padding:14px 10px;text-align:left;background:#343943;color:#fff}
+.wave{display:block;width:100%;height:46px;margin-top:10px;border-radius:10px;background:#191c21;opacity:.45}
+.wave.live{opacity:1}
+.skeleton{height:44px;margin-top:7px;border-radius:10px;background:linear-gradient(90deg,#2a2e36 25%,#383d47 50%,#2a2e36 75%);background-size:200% 100%;animation:skel 1.2s linear infinite}
+.skeleton.chip{flex:0 0 150px;height:46px;margin-top:0}
+@keyframes skel{to{background-position:-200% 0}}
+.pin.stale{opacity:.6;filter:grayscale(.6)}
+.seen-tag{position:absolute;top:40px;left:50%;translate:-50% 0;white-space:nowrap;font-size:10px;font-weight:700;background:#17191d;color:#fff;border:1px solid #555;padding:2px 6px;border-radius:8px}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3000}
+@media print{
+  *{animation:none!important;transition:none!important}
+  body{background:#fff!important;color:#000!important}
+  body *{visibility:hidden}
+  #screen-summary,#screen-summary *{visibility:visible}
+  #screen-summary{position:absolute;left:0;top:0;width:100%;max-width:none;display:block!important;padding:0}
+  #screen-summary .card,#screen-summary .metric{background:#fff!important;color:#000!important;border:1px solid #999!important;box-shadow:none!important}
+  #screen-summary small,#screen-summary .subtitle,#screen-summary .eyebrow{color:#444!important}
+  #screen-summary .code{color:#000!important}
+  #screen-summary .no-print,#screen-summary button,#screen-summary .notice{display:none!important}
+}
+/* ===== Accounts screen (glass card, travelling light beams, 3D tilt). Change --glow to retint: purple is 168,85,247 ===== */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#auth{--glow:244,196,48;position:fixed;inset:0;z-index:1500;overflow-x:hidden;overflow-y:auto;background:#07080a;display:grid;place-items:center;padding:24px 16px}
+#auth::before{content:"";position:fixed;inset:0;background:linear-gradient(to bottom,rgba(var(--glow),.2),rgba(var(--glow),.1) 45%,#07080a 100%)}
+.auth-noise{position:fixed;inset:0;opacity:.035;mix-blend-mode:soft-light;pointer-events:none;background-size:200px 200px;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.auth-glow{position:fixed;left:50%;pointer-events:none;background:rgba(var(--glow),.2);filter:blur(70px);transform:translateX(-50%)}
+.auth-glow-top{top:0;width:min(120vh,140vw);height:55vh;border-radius:0 0 50% 50%;animation:authPulse 8s ease-in-out infinite alternate}
+.auth-glow-bottom{bottom:0;width:min(90vh,120vw);height:70vh;border-radius:50% 50% 0 0;opacity:.7;animation:authPulse 6s ease-in-out 1s infinite alternate}
+@keyframes authPulse{from{opacity:.35}to{opacity:.8}}
+.auth-stage{position:relative;z-index:2;width:100%;max-width:384px;perspective:1500px}
+.auth-tilt{position:relative;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .18s ease-out;transform-style:preserve-3d;animation:authIn .7s var(--ease,ease-out) both}
+@keyframes authIn{from{opacity:0;translate:0 18px}to{opacity:1;translate:0 0}}
+.auth-beams{position:absolute;inset:-1px;border-radius:19px;overflow:hidden;pointer-events:none}
+.beam{position:absolute;background:linear-gradient(var(--dir),transparent,#fff,transparent);opacity:.6;filter:blur(1.5px)}
+.b-top{top:0;left:0;height:3px;width:50%;--dir:90deg;animation:beamX 3.5s ease-in-out infinite}
+.b-right{top:0;right:0;width:3px;height:50%;--dir:180deg;animation:beamY 3.5s ease-in-out .6s infinite}
+.b-bottom{bottom:0;right:0;height:3px;width:50%;--dir:90deg;animation:beamXr 3.5s ease-in-out 1.2s infinite}
+.b-left{bottom:0;left:0;width:3px;height:50%;--dir:180deg;animation:beamYr 3.5s ease-in-out 1.8s infinite}
+@keyframes beamX{0%{transform:translateX(-100%)}71%,100%{transform:translateX(200%)}}
+@keyframes beamY{0%{transform:translateY(-100%)}71%,100%{transform:translateY(200%)}}
+@keyframes beamXr{0%{transform:translateX(100%)}71%,100%{transform:translateX(-200%)}}
+@keyframes beamYr{0%{transform:translateY(100%)}71%,100%{transform:translateY(-200%)}}
+.auth-card{position:relative;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:26px 24px 22px;box-shadow:0 25px 60px #000b;overflow:hidden}
+.auth-card::before{content:"";position:absolute;inset:0;opacity:.03;pointer-events:none;background-size:30px 30px;background-image:linear-gradient(135deg,#fff .5px,transparent .5px),linear-gradient(45deg,#fff .5px,transparent .5px)}
+.auth-head{position:relative;text-align:center;margin-bottom:20px}
+.auth-logo{margin:0 auto 10px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);display:grid;place-items:center;font-size:22px;color:var(--yellow);background:linear-gradient(135deg,rgba(255,255,255,.1),transparent)}
+#auth h1{font-size:22px;margin:0 0 4px;background:linear-gradient(to bottom,#fff,rgba(255,255,255,.8));-webkit-background-clip:text;background-clip:text;color:transparent}
+#auth .auth-head p{margin:0;font-size:13px;color:rgba(255,255,255,.6)}
+#authForm{position:relative;display:grid;gap:12px}
+.auth-field{position:relative;display:flex;align-items:center}
+.auth-field>svg{position:absolute;left:13px;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:rgba(255,255,255,.4);transition:color .25s;pointer-events:none}
+.auth-field:focus-within>svg{color:#fff}
+.auth-input{height:44px;padding:0 42px 0 40px;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:10px;color:#fff;font-size:15px;transition:background .25s,border-color .25s}
+.auth-input::placeholder{color:rgba(255,255,255,.32)}
+.auth-input:focus{outline:0;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22)}
+.auth-input:focus-visible{box-shadow:0 0 0 3px rgba(var(--glow),.25)}
+.auth-eye{position:absolute;right:5px;width:34px;height:34px;padding:0;display:grid;place-items:center;background:transparent;color:rgba(255,255,255,.45);border-radius:8px}
+.auth-eye:hover{color:#fff}
+.auth-eye svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.auth-remember{display:flex;align-items:center;gap:9px;font-size:12px;color:rgba(255,255,255,.6);cursor:pointer;padding-top:2px}
+.auth-remember input{width:16px;height:16px;padding:0;margin:0;accent-color:var(--yellow);flex:none}
+#authError{font-size:12.5px;color:#ff9993;line-height:1.4}
+#authError:empty{display:none}
+.auth-submit{position:relative;overflow:hidden;width:100%;height:44px;border-radius:10px;background:var(--yellow);color:#14161a;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .15s,box-shadow .3s}
+.auth-submit:hover{box-shadow:0 0 28px rgba(var(--glow),.35)}
+.auth-submit:active{transform:scale(.98)}
+.auth-submit:disabled{cursor:progress}
+.auth-submit svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.auth-submit:hover svg{transform:translateX(4px)}
+.auth-submit::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);opacity:0}
+.auth-submit.loading::after{opacity:1;animation:authShimmer 1.4s ease-in-out infinite}
+@keyframes authShimmer{to{transform:translateX(100%)}}
+.auth-spin{display:none;width:16px;height:16px;border:2px solid rgba(20,22,26,.7);border-top-color:transparent;border-radius:50%;animation:authSpin .7s linear infinite}
+.auth-submit.loading .auth-spin{display:block}
+.auth-submit.loading .auth-submit-label,.auth-submit.loading svg{display:none}
+@keyframes authSpin{to{transform:rotate(360deg)}}
+.auth-switch{position:relative;text-align:center;font-size:12.5px;color:rgba(255,255,255,.6);margin:18px 0 0}
+.auth-link{background:none;padding:2px 3px;color:#fff;font-weight:700;font-size:12.5px;border-radius:5px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.3)}
+.auth-link:hover{text-decoration-color:#fff}
+#auth button:focus-visible,#auth input:focus-visible{outline:2px solid rgba(var(--glow),.8);outline-offset:2px}
+.auth-note{position:relative;text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin:12px 0 0}
+.acct-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:2px 0 6px}
+.acct-bar b{color:var(--text)}
+.acct-bar button{padding:7px 12px;font-size:12px}
+@media(prefers-reduced-motion:reduce){.beam,.auth-glow,.auth-tilt,.auth-submit.loading::after{animation:none!important}.auth-tilt{transition:none}}
+/* ===== Profile pictures ===== */
+.pin.photo,.nav-pin.photo{background-size:cover;background-position:center;background-repeat:no-repeat;color:transparent;font-size:0;border-color:var(--ring,#fff)}
+.pin.photo{width:40px;height:40px}
+.pin.photo .seen-tag{top:46px;font-size:10px;color:#fff}
+.pin.photo.halted{border-color:var(--orange)}
+.avatar.photo{border-radius:50%;background-size:cover;background-position:center;color:transparent;font-size:0}
+.mini-avatar.photo{background-size:cover;background-position:center;color:transparent;font-size:0;border:2px solid var(--ring,#fff)}
+.auth-avatar{justify-self:center;display:grid;justify-items:center;gap:6px;background:none;padding:0;color:rgba(255,255,255,.55);font-size:12px;font-weight:600}
+.auth-avatar-ring{position:relative;width:76px;height:76px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.28);display:grid;place-items:center;overflow:hidden;background:rgba(255,255,255,.05);transition:border-color .25s,background .25s}
+.auth-avatar:hover .auth-avatar-ring{border-color:rgba(var(--glow),.8);background:rgba(255,255,255,.09)}
+.auth-avatar-ring svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.auth-avatar-ring img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.auth-avatar.has-photo .auth-avatar-ring{border-style:solid;border-color:rgba(var(--glow),.9)}
+#authAvatarField{display:grid;justify-items:center;gap:4px;margin-bottom:2px}
+#authAvatarField[hidden]{display:none}
+.auth-avatar-clear{background:none;color:rgba(255,255,255,.5);font-size:11px;padding:2px 6px;text-decoration:underline;text-underline-offset:2px}
+.auth-avatar-clear[hidden]{display:none}
+.acct-bar{align-items:center}
+.acct-who{display:flex;align-items:center;gap:11px;min-width:0}
+.acct-bar .acct-avatar{position:relative;flex:none;width:46px;height:46px;padding:0;border-radius:50%;border:2px solid var(--line);background:#2a2d34;color:var(--yellow);font-size:18px;font-weight:900;display:grid;place-items:center;overflow:hidden}
+.acct-avatar:hover{border-color:var(--yellow)}
+.acct-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.acct-avatar img[hidden]{display:none}
+.acct-cam{position:absolute;right:-1px;bottom:-1px;width:18px;height:18px;border-radius:50%;background:var(--yellow);color:#14161a;display:grid;place-items:center;border:2px solid #17191d}
+.acct-cam svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.acct-text{display:grid;gap:2px;min-width:0}
+.acct-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-links{display:flex;gap:10px;align-items:center}
+.acct-bar .acct-links button{background:none;color:var(--yellow);padding:0;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.acct-links button[hidden]{display:none}
+#acctPhotoMsg{font-size:11.5px;color:#ff9993;min-height:0}
+#acctPhotoMsg:empty{display:none}
+#acctPhotoMsg.ok{color:#8ce4b4}
+/* ===== Thinking orb (shown while the app works) ===== */
+#busy{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;background:rgba(23,25,29,.84);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#busy .busy-box{display:grid;justify-items:center;gap:12px;padding:26px 30px;background:var(--card);border:1px solid var(--line);border-radius:18px;text-align:center;width:min(86vw,320px);box-shadow:0 20px 60px #000a}
+#busy .busy-orb,.orb-row .busy-orb{width:64px;height:64px;flex:none;display:grid;place-items:center}
+#busy p{margin:0;font-weight:800;font-size:15px}
+#busy small{color:var(--muted);font-size:12px;min-height:14px}
+.orb-row{display:flex;align-items:center;gap:14px;padding:10px 4px}
+.orb-row span{color:var(--muted);font-size:14px}
+/* ===== Voice guidance + incoming voice toast ===== */
+.voice-button{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+.navtop button.active{background:var(--yellow);color:#17191d;border-color:var(--yellow)}
+#voiceToast{position:fixed;z-index:1100;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);width:min(92vw,420px);display:flex;align-items:center;gap:10px;background:#292d34;border:1px solid var(--line);border-left:5px solid var(--yellow);border-radius:12px;padding:12px 14px;box-shadow:0 8px 30px #0008;font-size:13px;animation:bannerSlide .25s var(--motion-ease,ease-out) both}
+#voiceToast[hidden]{display:none!important}
+#voiceToast b{margin-right:4px}
+#voiceToast button{width:100%;padding:11px 14px}
+@media(prefers-reduced-motion:reduce){#voiceToast{animation:none!important}}
 </style>
 </head>
 <body>
 
-<section id="setup">
+<section id="auth" aria-label="Account" hidden>
+  <div class="auth-noise"></div><div class="auth-glow auth-glow-top"></div><div class="auth-glow auth-glow-bottom"></div>
+  <div class="auth-stage" id="authStage">
+    <div class="auth-tilt" id="authTilt">
+      <div class="auth-beams" aria-hidden="true"><i class="beam b-top"></i><i class="beam b-right"></i><i class="beam b-bottom"></i><i class="beam b-left"></i></div>
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="auth-logo" aria-hidden="true">⬡</div>
+          <h1 id="authTitle">Welcome back</h1>
+          <p id="authSub">Sign in to continue to ONEROUTE</p>
+        </div>
+        <form id="authForm" novalidate>
+          <div id="authAvatarField" hidden>
+            <button type="button" class="auth-avatar" id="authAvatarBtn" aria-label="Add a profile photo (optional)">
+              <span class="auth-avatar-ring">
+                <svg id="authAvatarIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                <img id="authAvatarPreview" alt="Your profile photo" hidden>
+              </span>
+              <span id="authAvatarLabel">Add a photo (optional)</span>
+            </button>
+            <button type="button" class="auth-avatar-clear" id="authAvatarClear" hidden>Remove photo</button>
+            <input type="file" id="authAvatarFile" accept="image/*" hidden>
+          </div>
+          <div class="auth-field" id="authNameField" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <label class="sr-only" for="authName">Your name</label>
+            <input class="auth-input" id="authName" name="name" type="text" maxlength="20" autocomplete="name" placeholder="Your name">
+          </div>
+          <div class="auth-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            <label class="sr-only" for="authEmail">Email address</label>
+            <input class="auth-input" id="authEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Email address">
+          </div>
+          <div class="auth-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <label class="sr-only" for="authPassword">Password</label>
+            <input class="auth-input" id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Password">
+            <button type="button" class="auth-eye" id="authEye" aria-label="Show password" aria-pressed="false">
+              <svg id="eyeOn" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeOff" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+            </button>
+          </div>
+          <label class="auth-remember"><input type="checkbox" id="authRemember" checked> Keep me signed in on this device</label>
+          <div id="authError" role="alert"></div>
+          <button class="auth-submit" id="authSubmit" type="submit"><span class="auth-submit-label" id="authSubmitLabel">Sign in</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><span class="auth-spin" aria-hidden="true"></span></button>
+        </form>
+        <p class="auth-switch"><span id="authSwitchText">Don’t have an account?</span> <button type="button" class="auth-link" id="authSwitch">Sign up</button></p>
+        <p class="auth-note">You only need to do this once on each device.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="setup" hidden>
+  <div class="acct-bar">
+    <div class="acct-who">
+      <button type="button" class="acct-avatar" id="acctAvatar" aria-label="Change profile photo">
+        <span id="acctAvatarLetter" aria-hidden="true">?</span>
+        <img id="acctAvatarImg" alt="" hidden>
+        <i class="acct-cam" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg></i>
+      </button>
+      <div class="acct-text">
+        <span>Signed in as <b id="acctName"></b></span>
+        <div class="acct-links"><button type="button" id="acctChange">Add photo</button><button type="button" id="acctRemove" hidden>Remove</button></div>
+        <small id="acctPhotoMsg" role="status"></small>
+      </div>
+    </div>
+    <button id="signOut" class="secondary" type="button">Sign out</button>
+    <input type="file" id="acctPhotoFile" accept="image/*" hidden>
+  </div>
   <div class="hero">
     <div class="brand">⬡ ONEROUTE</div>
     <p class="eyebrow">Convoy control system</p>
@@ -187,10 +510,15 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
         <div id="map"></div>
         <div class="speed-bubble" aria-live="polite"><strong id="speedValue">--</strong><small>km/h</small></div>
         <div class="map-tools">
+          <button id="openNavigation">➤ Navigation</button>
           <button id="recenter">⌖ Recenter</button>
           <button id="follow">Follow: ON</button>
           <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
           <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+          <button id="haltToggle">⏸ I'm stopping</button>
+          <button id="sosButton">🆘 SOS</button>
+          <button id="alertsToggle">🔊 Alerts: ON</button>
+          <button id="navVoiceToggle" aria-pressed="true">🧭 Voice guidance: ON</button>
         </div>
         <div id="quickStopMenu" class="quick-stop-menu" hidden>
           <h3>Add a stop to your convoy route</h3>
@@ -205,6 +533,22 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
         <div class="metric"><label>Furthest gap</label><strong id="gap">—</strong><small>Distance behind</small></div>
         <div class="metric"><label>On route</label><strong id="onroute">—</strong><small>Current status</small></div>
       </div>
+      <section class="voice-console" id="mapVoiceConsole">
+        <h2>🎙️ Convoy voice messages</h2>
+        <p>Record a short audio message and send it to everyone in your convoy. Tap again to stop recording.</p>
+        <div class="voice-controls"><button type="button" id="mapTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Hold to talk</span></button><span id="mapTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="mapTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Hold the mic, speak, release to send</span></div>
+        <canvas id="mapWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
+        <div id="voiceMessages" class="voice-messages" aria-live="polite"></div>
+      </section>
+      <section id="sosPanel" class="sos-panel" hidden><h2>🆘 SOS</h2><div id="sosList"></div></section>
+      <section id="regroupPanel" class="regroup-panel" hidden>
+        <p class="eyebrow">Smart regroup</p><h2 id="regroupTitle">Regroup point</h2><p id="regroupDetail" class="subtitle"></p>
+        <div class="panel-actions"><button id="regroupShow">Show on map</button><button id="regroupDismiss" class="secondary">Dismiss</button></div>
+      </section>
+      <section id="haltPanel" class="halt-panel" hidden>
+        <h2>⏸ Convoy halts</h2><p id="haltSummary" class="subtitle"></p><div id="haltList"></div>
+      </section>
       <section class="waypoints-panel">
         <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
         <div id="waypointsList"></div>
@@ -214,6 +558,7 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
       <div class="card">
         <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy">Copy</button></div>
       </div>
+      <div class="card"><h2>Live link for family</h2><p class="subtitle">Anyone with this link can watch the convoy on a map. It is read-only and needs no trip code, so only share it with people you trust.</p><button id="shareLive" class="full secondary">Share live link</button></div>
     </section>
 
     <section id="screen-status" class="screen">
@@ -230,11 +575,16 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
 
     <section id="screen-chat" class="screen">
       <p class="eyebrow">Coordinate together</p><h1>Convoy chat</h1>
-      <div class="card" style="text-align:center;padding:32px 18px">
-        <div style="font-size:38px;color:var(--yellow)">☏</div>
-        <h2>Chat integration needed</h2>
-        <p class="subtitle">Your current server does not relay chat messages yet. Add a Socket.IO chat event to enable messaging for everyone in this trip.</p>
-      </div>
+      <section class="voice-console" id="chatVoiceConsole">
+        <h2>🎙️ Voice chat</h2>
+        <p>Send an audio message to the convoy. Allow microphone access when your browser asks.</p>
+        <div class="voice-controls"><button type="button" id="chatTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Hold to talk</span></button><span id="chatTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="chatTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Hold the mic, speak, release to send</span></div>
+        <canvas id="chatWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
+      </section>
+      <div class="card"><h2>Quick replies</h2><p class="subtitle">One tap, nothing to type. Everyone in the convoy sees it.</p><div id="quickGrid" class="quick-grid"></div></div>
+      <div class="card"><h2>Convoy messages</h2><div id="quickLog"><p class="subtitle">No messages yet.</p></div></div>
+      <div class="card"><h2>Received voice messages</h2><p class="subtitle">Audio messages received from convoy members appear in the voice message list on the Map tab.</p></div>
       <div class="notice">For safety, passengers should handle messages while the vehicle is moving.</div>
     </section>
 
@@ -246,13 +596,31 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
         <div class="metric"><label>On route</label><strong id="uonroute">—</strong></div>
         <div class="metric"><label>Largest gap</label><strong id="ugap">—</strong></div>
       </div>
+      <div class="metrics">
+        <div class="metric"><label>Separations</label><strong id="repSepCount">0</strong></div>
+        <div class="metric"><label>Longest</label><strong id="repLongest">—</strong></div>
+        <div class="metric"><label>Time stopped</label><strong id="repStopped">—</strong></div>
+      </div>
+      <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
+      <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
+      <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
       <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
     </section>
   </main>
   <div id="banner" role="status" aria-live="polite"></div>
+  <div id="voiceToast" role="status" aria-live="polite" hidden></div>
+  <div id="busy" role="status" aria-live="polite" hidden><div class="busy-box"><div class="busy-orb"></div><p id="busyLabel"></p><small id="busyHint"></small></div></div>
 </div>
+
+<section id="navigationScreen" hidden aria-label="Full-screen navigation">
+  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="navVoiceToggle2" class="secondary" aria-pressed="true" title="Spoken directions">🔊 Voice</button><button id="navSos" class="secondary">🆘</button><button id="navHalt" class="secondary">⏸ Stop</button><button id="closeNavigation" class="secondary">✕ Exit</button></header>
+  <div class="nav-turn" aria-live="polite"><div class="turn-icon" id="navTurnIcon">↑</div><div class="turn-copy"><small id="navTurnLabel">NEXT MANEUVER</small><strong id="navInstruction">Finding your route…</strong><span id="navRoadName">Keep the convoy together</span></div><div class="turn-distance" id="navTurnDistance">—<small>TO TURN</small></div></div>
+  <div class="nav-map-area"><div id="navMap"></div><div class="nav-map-badge">● <b id="navLiveCount">0 vehicles</b> · live convoy positions</div></div>
+  <div class="nav-bottom"><div class="nav-bottom-head"><strong>Convoy locations</strong><span>Tap a driver to focus map</span></div><div id="navConvoy" class="nav-convoy"></div><div class="nav-bottom-head" style="margin-top:4px"><strong>Upcoming directions</strong><span id="navStepsCount">Turn-by-turn</span></div><div id="navNextSteps" class="nav-next-list"></div><div class="nav-note" id="navNotice">Directions use the Open Source Routing Machine public demo service. Keep your eyes on the road and follow road signs.</div></div>
+</section>
 
 <nav id="nav" class="bottom-nav" hidden aria-label="Main navigation">
   <button class="nav-btn active" data-screen="map"><span class="ico">⌖</span>MAP</button>
@@ -261,17 +629,660 @@ input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px var(--glow);backgrou
   <button class="nav-btn" data-screen="summary"><span class="ico">▤</span>SUMMARY</button>
 </nav>
 
+<canvas id="confetti" aria-hidden="true"></canvas>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/orb.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);
-const socket=io();
+// ===== NEW: accounts. The socket only connects after login and sends the saved login token. =====
+const AUTH_KEY='oneroute-token';
+let authToken='';try{authToken=localStorage.getItem(AUTH_KEY)||sessionStorage.getItem(AUTH_KEY)||''}catch{}
+let authUser=null;
+const socket=io({autoConnect:false,auth:cb=>cb({token:authToken})});
+function authHeaders(){return authToken?{Authorization:'Bearer '+authToken}:{}}
 const COLORS={ok:'#42c786',behind:'#f2a23a',off:'#f05b57',offline:'#9ca3af',arrived:'#6aa8ff'};
 const LABEL={ok:'On route',behind:'Behind',off:'Off route',offline:'No signal',arrived:'Arrived'};
 let chosen=null,session=null,map=null,watchId=null,wakeLock=null,follow=true,rejoinMarker=null,bannerTimer=null,pendingTrip=null,plannedWaypoints=[],plannerMap=null,plannerMarkers=[],lastGps=null,fuelVisible=false,fuelMarkers=[],fuelRequestId=0;
+let navMap=null,navMarkers={},navRouteSteps=[],navStepIndex=0,navCars=[],navRouteCoords=[],navRouteRequest=0,navOpen=false,navLastRouteAt=0;
 const markers={};
+
+// ===== NEW: motion helpers =====
+const REDUCED=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const glides=new Map();
+// Smoothly glide a MapLibre marker to a new [lon,lat] instead of jumping.
+function glideMarker(key,marker,to,ms=700){
+  const from=marker.getLngLat();
+  cancelAnimationFrame(glides.get(key));
+  const dx=to[0]-from.lng,dy=to[1]-from.lat;
+  // Snap when reduced motion is on, nothing changed, or the jump is huge (teleport / reconnect).
+  if(REDUCED||(Math.abs(dx)<1e-7&&Math.abs(dy)<1e-7)||Math.abs(dx)>0.05||Math.abs(dy)>0.05){marker.setLngLat(to);return}
+  const t0=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/ms),e=1-Math.pow(1-p,3);
+    marker.setLngLat([from.lng+dx*e,from.lat+dy*e]);
+    if(p<1)glides.set(key,requestAnimationFrame(step));
+  };
+  glides.set(key,requestAnimationFrame(step));
+}
+// Count a number up/down to its new value.
+function animateNumber(el,to,decimals=0,suffix=''){
+  if(!el)return;
+  const from=Number(el._v);el._v=to;
+  cancelAnimationFrame(el._raf);
+  if(REDUCED||!Number.isFinite(from)||from===to){el.textContent=to.toFixed(decimals)+suffix;return}
+  const t0=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/500),e=1-Math.pow(1-p,3);
+    el.textContent=(from+(to-from)*e).toFixed(decimals)+suffix;
+    if(p<1)el._raf=requestAnimationFrame(step);
+  };
+  el._raf=requestAnimationFrame(step);
+}
+
+// ===== NEW: smart regroup points + "I'm stopping" =====
+let lastCars=[],regroupMarker=null,regroupBusy=false,regroupTarget=null,regroupTimer=null,myHalt=null,haltTotalMs=0,cumCache=null,cumFor=null;
+const regroupSeen={},halts={};
+const routeCoords=()=>Array.isArray(pendingTrip?.route)?pendingTrip.route:[];
+function nearestRouteIdx(pt){
+  const r=routeCoords();let best=-1,bd=Infinity;const k=Math.cos(pt[1]*Math.PI/180);
+  for(let i=0;i<r.length;i++){const dx=(r[i][0]-pt[0])*k,dy=r[i][1]-pt[1],d=dx*dx+dy*dy;if(d<bd){bd=d;best=i}}
+  return {idx:best,meters:Math.sqrt(bd)*111320};
+}
+function routeCum(){
+  const r=routeCoords();if(cumFor===r&&cumCache)return cumCache;
+  const c=[0];for(let i=1;i<r.length;i++)c.push(c[i-1]+navDistance(r[i-1],r[i])/1000);
+  cumCache=c;cumFor=r;return c;
+}
+const STOP_KIND={fuel:['⛽','Fuel station'],rest_area:['🛏️','Rest area'],services:['🅿️','Service area']};
+function clearRegroup(){
+  clearTimeout(regroupTimer);regroupTarget=null;
+  if(regroupMarker){regroupMarker.remove();regroupMarker=null}
+  $('regroupPanel').hidden=true;
+}
+async function suggestRegroup(a){
+  const key=a.id||a.name,now=Date.now();
+  if(regroupBusy||now-(regroupSeen[key]||0)<120000)return;
+  if(routeCoords().length<2||!map)return;
+  const placed=lastCars.filter(c=>Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat)))
+    .map(c=>({c,...nearestRouteIdx([Number(c.lon),Number(c.lat)])})).filter(p=>p.meters<2000);
+  if(placed.length<2)return;
+  const lag=placed.find(p=>p.c.id===a.id)||placed.find(p=>p.c.name===a.name)||placed.reduce((x,y)=>x.idx<y.idx?x:y);
+  const lead=placed.reduce((x,y)=>x.idx>y.idx?x:y);
+  if(lead.idx<=lag.idx)return;
+  regroupSeen[key]=now;regroupBusy=true;
+  $('regroupTitle').textContent='Finding a regroup point…';$('regroupDetail').replaceChildren(skeletonBlock(2));$('regroupPanel').hidden=false;
+  try{
+    await new Promise(r=>setTimeout(r,Math.random()*1500)); // spread load if several phones ask at once
+    const lat=Number(lead.c.lat),lon=Number(lead.c.lon),ar=`(around:12000,${lat},${lon})`;
+    const q=`[out:json][timeout:20];(nwr${ar}[amenity=fuel];nwr${ar}[highway=rest_area];nwr${ar}[highway=services];);out center tags;`;
+    const resp=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)});
+    if(!resp.ok)throw new Error('Overpass failed');
+    const data=await resp.json();
+    const cands=(data.elements||[]).map(el=>{
+      const la=Number(el.lat??el.center?.lat),lo=Number(el.lon??el.center?.lon);
+      if(!Number.isFinite(la)||!Number.isFinite(lo))return null;
+      const t=el.tags||{},kind=t.amenity==='fuel'?'fuel':t.highway==='rest_area'?'rest_area':'services';
+      const n=nearestRouteIdx([lo,la]);if(n.meters>1500)return null;
+      return {name:t.name||t.brand||STOP_KIND[kind][1],kind,lat:la,lon:lo,idx:n.idx};
+    }).filter(Boolean);
+    // Prefer a stop just ahead of the leader (nobody has to turn back); otherwise the closest stop between the two.
+    const ahead=cands.filter(s=>s.idx>=lead.idx).sort((x,y)=>x.idx-y.idx);
+    const between=cands.filter(s=>s.idx>lag.idx&&s.idx<lead.idx).sort((x,y)=>Math.abs(x.idx-lead.idx)-Math.abs(y.idx-lead.idx));
+    const stop=ahead[0]||between[0];
+    clearRegroup();
+    if(!stop){
+      $('regroupTitle').textContent='No rest area found nearby';
+      $('regroupDetail').textContent=`${a.name||'A driver'} is ${a.gapKm??'several'} km behind. No fuel stop or rest area was found along the next stretch. Pick a safe place to wait.`;
+      $('regroupPanel').hidden=false;return;
+    }
+    const cum=routeCum(),lagKm=Math.max(0,cum[stop.idx]-cum[lag.idx]),leadKm=Math.max(0,cum[stop.idx]-cum[lead.idx]);
+    const [icon,label]=STOP_KIND[stop.kind];
+    $('regroupTitle').textContent=`${icon} ${stop.name}`;
+    $('regroupDetail').textContent=`${label} on your route. ${lead.c.name||'The lead car'} is ${leadKm.toFixed(1)} km away; ${a.name||lag.c.name||'the car behind'} is ${lagKm.toFixed(1)} km away (about ${Math.max(1,Math.round(lagKm))} min at 60 km/h). Everyone can wait here.`;
+    $('regroupPanel').hidden=false;
+    const el=document.createElement('div');el.className='regroup-pin';el.textContent=icon+' Regroup';
+    regroupMarker=new maplibregl.Marker({element:el}).setLngLat([stop.lon,stop.lat]).addTo(map);
+    regroupTarget={lat:stop.lat,lon:stop.lon,lagId:lag.c.id};
+    regroupTimer=setTimeout(clearRegroup,600000);
+    announce(`Regroup suggested at ${stop.name}`,[200,100,200]);
+    showBanner(`<b>Suggested regroup: ${esc(stop.name)}</b>${leadKm.toFixed(1)} km ahead of the leader. Details are on the Map tab.`,'ok',9000);
+  }catch(e){
+    clearRegroup();showBanner('<b>Regroup suggestion failed</b>Could not look up nearby stops. Check your connection.','warn',5000);
+  }finally{regroupBusy=false}
+}
+function checkRegroupArrival(){
+  if(!regroupTarget)return;
+  const car=lastCars.find(c=>c.id===regroupTarget.lagId);
+  if(car&&Number.isFinite(Number(car.lon))&&navDistance([Number(car.lon),Number(car.lat)],[regroupTarget.lon,regroupTarget.lat])<400){
+    clearRegroup();showBanner('<b>Convoy regrouped</b>The last car reached the regroup point.','ok',5000);
+  }
+}
+$('regroupShow').onclick=()=>{showScreen('map');if(regroupTarget&&map)map.flyTo({center:[regroupTarget.lon,regroupTarget.lat],zoom:14,duration:700})};
+$('regroupDismiss').onclick=clearRegroup;
+
+const fmtMin=ms=>{const m=Math.round(Math.max(0,ms)/60000);return m<1?'<1 min':m+' min'};
+function updateHaltButtons(){
+  ['haltToggle','navHalt'].forEach(id=>{const b=$(id);if(!b)return;b.classList.toggle('halted',!!myHalt);b.textContent=myHalt?"▶ I'm moving again":(id==='navHalt'?'⏸ Stop':"⏸ I'm stopping")});
+}
+function renderHalts(){
+  const ids=Object.keys(halts),list=$('haltList');list.replaceChildren();
+  const longest=ids.reduce((m,id)=>Math.max(m,Date.now()-halts[id].at),0);
+  $('haltPanel').hidden=!ids.length&&!haltTotalMs;
+  $('haltSummary').textContent=`Convoy ETA delay so far: +${fmtMin(haltTotalMs+longest)}`;
+  ids.forEach(id=>{
+    const h=halts[id],row=document.createElement('div');row.className='halt-row';
+    const left=document.createElement('span'),b=document.createElement('b');b.textContent=id===socket.id?'You':h.name;
+    left.append(b,document.createTextNode(' stopped · '+fmtMin(Date.now()-h.at)));
+    const tag=document.createElement('span');tag.className='status behind';tag.textContent='ETA +'+fmtMin(Date.now()-h.at);
+    row.append(left,tag);list.appendChild(row);
+  });
+  Object.keys(markers).forEach(id=>markers[id].getElement().classList.toggle('halted',!!halts[id]));
+}
+function applyHalt(m){
+  if(!m||!m.id)return;
+  const mine=m.id===socket.id,who=mine?'You':esc(m.name||'A convoy member');
+  if(m.state==='stopped'){
+    if(halts[m.id])return;
+    halts[m.id]={name:m.name||'Driver',at:Date.now()};if(mine)myHalt=halts[m.id];
+    showBanner(`<b>${who} ${mine?'are':'is'} stopping</b>Convoy ETA delay is counting from now.`,'warn',8000);
+    if(!mine)announce(`${m.name||'A driver'} is stopping`,[200]);
+  }else if(m.state==='moving'){
+    const h=halts[m.id];if(!h)return;
+    const ms=Date.now()-h.at;haltTotalMs+=ms;delete halts[m.id];if(mine)myHalt=null;
+    showBanner(`<b>${who} back on the road</b>Stopped ${fmtMin(ms)}. Convoy ETA +${fmtMin(ms)}.`,'ok',7000);
+    if(!mine)announce(`${m.name||'A driver'} is moving again`,[120]);
+  }
+  updateHaltButtons();renderHalts();
+}
+function toggleHalt(){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  const payload={state:myHalt?'moving':'stopped',at:Date.now(),lat:lastGps?.lat,lon:lastGps?.lon};
+  let acked=false;
+  socket.emit('halt',payload,res=>{acked=true;if(!res||!res.ok)showBanner('<b>Halt not shared</b>'+esc(res?.error||'The server rejected it.'),'warn',6000)});
+  setTimeout(()=>{if(!acked)showBanner('<b>Others may not see this</b>The server has no halt handler yet. Add it to index.js.','warn',7000)},2500);
+  applyHalt({id:socket.id,name:session.name,...payload});
+}
+socket.on('halt',applyHalt);
+$('haltToggle').onclick=toggleHalt;$('navHalt').onclick=toggleHalt;
+setInterval(()=>{if(Object.keys(halts).length)renderHalts()},15000);
+
+// ===== NEW: real trip summary (separations, arrivals, stops) =====
+let summaryTimer=null;
+function mk(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+const fmtDur=ms=>{const s=Math.max(0,Math.round(ms/1000));if(s<60)return s+' s';const m=Math.floor(s/60);if(m<60)return m+' min';return Math.floor(m/60)+' h '+(m%60)+' min'};
+const fmtClock=t=>new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+function focusOn(lat,lon){showScreen('map');if(map)setTimeout(()=>map.flyTo({center:[lon,lat],zoom:14,duration:700}),120)}
+function reportRow(title,detail,tagText,tagClass,action){
+  const row=mk('div','row'),left=mk('div'),right=mk('div');
+  left.append(mk('b','',title),document.createElement('br'),mk('small','',detail));
+  right.append(mk('span','status '+tagClass,tagText));
+  if(action){const b=mk('button','secondary',action.label);b.style.cssText='display:block;margin:8px 0 0 auto;padding:7px 9px;font-size:11px';b.onclick=action.run;right.append(b)}
+  row.append(left,right);return row;
+}
+function renderSummary(s){
+  if(!s||typeof s!=='object')return;
+  lastSummary=s;
+  const totals=s.totals||{};
+  $('repSepCount').textContent=totals.separations||0;
+  $('repLongest').textContent=totals.longestMs?fmtDur(totals.longestMs):'—';
+  $('repStopped').textContent=totals.haltMs?fmtDur(totals.haltMs):'—';
+
+  const sepList=$('sepList');sepList.replaceChildren();
+  const seps=(Array.isArray(s.separations)?s.separations:[]).slice().reverse();
+  if(!seps.length)sepList.append(mk('p','subtitle','No one has gotten separated yet.'));
+  seps.forEach(e=>{
+    const ongoing=!e.endedAt;
+    let detail=`${fmtClock(e.startedAt)} · km ${e.atKm} of ${s.totalKm} · ${ongoing?'separated for ':'lasted '}${fmtDur(e.durationMs)}`;
+    if(e.type==='behind'&&e.maxGapKm)detail+=` · up to ${Number(e.maxGapKm).toFixed(1)} km behind`;
+    if(!ongoing&&e.endReason==='disconnected')detail+=' · lost signal';
+    else if(!ongoing&&e.type==='off-route'&&e.rejoinKm!=null)detail+=` · rejoined at km ${e.rejoinKm}`;
+    const action=Number.isFinite(e.lat)&&Number.isFinite(e.lon)?{label:'Show on map',run:()=>focusOn(e.lat,e.lon)}:null;
+    sepList.append(reportRow(`${e.name} · ${e.type==='off-route'?'Missed a turn':'Fell behind'}`,detail,ongoing?'Ongoing':'Resolved',ongoing?'off':'ok',action));
+  });
+
+  const arrList=$('arrivalList');arrList.replaceChildren();
+  const members=Array.isArray(s.members)?s.members:[];
+  const arrived=members.filter(m=>m.arrivedAt).sort((a,b)=>a.arrivedAt-b.arrivedAt),waiting=members.filter(m=>!m.arrivedAt);
+  if(!members.length)arrList.append(mk('p','subtitle','Waiting for drivers…'));
+  arrived.forEach((m,i)=>{
+    const after=i===0?'First to arrive':'+'+fmtDur(m.arrivedAt-arrived[0].arrivedAt)+' after the first car';
+    arrList.append(reportRow(`${i+1}. ${m.name}`,`Arrived ${fmtClock(m.arrivedAt)} · ${after}`,'Arrived','ok'));
+  });
+  waiting.forEach(m=>arrList.append(reportRow(m.name,m.online?'Still on the way':'Offline',m.online?'On the way':'Offline',m.online?'behind':'off')));
+
+  const haltList=$('haltHistory');haltList.replaceChildren();
+  const hs=(Array.isArray(s.halts)?s.halts:[]).slice().reverse();
+  if(!hs.length)haltList.append(mk('p','subtitle','No stops announced yet.'));
+  hs.forEach(h=>haltList.append(reportRow(h.name,`${fmtClock(h.startedAt)} · stopped for ${fmtDur(h.durationMs)}`,h.endedAt?'Done':'Stopped',h.endedAt?'ok':'behind')));
+}
+function requestSummary(){if(!session)return;socket.emit('get-summary',res=>{if(res&&res.ok)renderSummary(res.summary)})}
+socket.on('summary',renderSummary);
+function onSummaryScreen(active){clearInterval(summaryTimer);summaryTimer=null;if(active){requestSummary();summaryTimer=setInterval(requestSummary,10000)}}
+
+// ===== NEW: spoken + haptic alerts =====
+let alertsOn=true;
+try{alertsOn=localStorage.getItem('oneroute-alerts')!=='off'}catch{}
+function syncAlertsButton(){const b=$('alertsToggle');if(b){b.textContent=alertsOn?'🔊 Alerts: ON':'🔇 Alerts: OFF';b.classList.toggle('active',alertsOn)}}
+function announce(text,pattern){
+  if(!alertsOn)return;
+  try{if(pattern&&navigator.vibrate)navigator.vibrate(pattern)}catch{}
+  try{if('speechSynthesis' in window&&text){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=navigator.language||'en-IN';speechSynthesis.speak(u)}}catch{}
+}
+$('alertsToggle').onclick=()=>{alertsOn=!alertsOn;try{localStorage.setItem('oneroute-alerts',alertsOn?'on':'off')}catch{}syncAlertsButton();if(alertsOn)announce('Spoken alerts on',[80])};
+syncAlertsButton();
+
+// ===== NEW: spoken navigation =====
+const speechOK='speechSynthesis' in window&&typeof SpeechSynthesisUtterance!=='undefined';
+let navVoiceOn=true,speechUnlocked=false,navSpoken={key:'',done:new Set()};
+try{navVoiceOn=localStorage.getItem('oneroute-navvoice')!=='off'}catch{}
+function syncNavVoiceButtons(){
+  [['navVoiceToggle',navVoiceOn?'🧭 Voice guidance: ON':'🔇 Voice guidance: OFF'],['navVoiceToggle2',navVoiceOn?'🔊 Voice':'🔇 Voice']].forEach(([id,label])=>{
+    const b=$(id);if(!b)return;b.textContent=label;b.classList.toggle('active',navVoiceOn);b.setAttribute('aria-pressed',String(navVoiceOn));
+  });
+}
+function speakNav(text,interrupt=true){
+  if(!navVoiceOn||!speechOK||!text)return;
+  try{
+    if(interrupt)speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=0.95;
+    u.onstart=()=>duckVoice(true);u.onend=u.onerror=()=>duckVoice(false);
+    speechSynthesis.speak(u);
+  }catch{}
+}
+function setNavVoice(on){
+  navVoiceOn=on;try{localStorage.setItem('oneroute-navvoice',on?'on':'off')}catch{}
+  syncNavVoiceButtons();
+  if(on)speakNav('Spoken directions on.');else if(speechOK){try{speechSynthesis.cancel()}catch{}}
+}
+['navVoiceToggle','navVoiceToggle2'].forEach(id=>{const b=$(id);if(b)b.onclick=()=>setNavVoice(!navVoiceOn)});
+syncNavVoiceButtons();
+const ORD=['','first','second','third','fourth','fifth','sixth','seventh','eighth'];
+function navSpokenManeuver(step){
+  const m=step?.maneuver||{},type=m.type||'continue',mod=m.modifier||'';
+  const dir=mod==='slight left'?'slightly left':mod==='slight right'?'slightly right':mod;
+  if(type==='arrive')return 'you will arrive at your destination';
+  if(mod==='uturn')return 'make a U-turn';
+  if(type==='roundabout'||type==='rotary'){const n=Number(m.exit);return n>0&&ORD[n]?`take the ${ORD[n]} exit at the roundabout`:'enter the roundabout'}
+  if(type==='merge')return 'merge'+(dir&&dir!=='straight'?' '+dir:'');
+  if(type==='fork')return 'keep '+(dir||'straight')+' at the fork';
+  if(type==='on ramp'||type==='off ramp')return 'take the ramp'+(dir&&dir!=='straight'?' on the '+dir:'');
+  if(type==='end of road')return 'turn '+(dir||'ahead')+' at the end of the road';
+  if(type==='continue'||type==='new name')return dir&&dir!=='straight'?'keep '+dir:'continue straight';
+  return dir&&dir!=='straight'?'turn '+dir:'continue straight';
+}
+function navSpokenDistance(m){
+  const km=m/1000;const r=km>=10?Math.round(km):km>=5?Math.round(km):Math.round(km*2)/2;
+  return r+' kilometre'+(r===1?'':'s');
+}
+// Speaks each prompt once per turn: far ("Continue straight for 2 kilometres"), 500 m, 200 m, and the turn itself.
+function navVoiceStage(step,meters){
+  if(!navVoiceOn||!step||!Number.isFinite(meters))return;
+  const m=step.maneuver||{},type=m.type||'continue';
+  if(type==='depart')return;
+  const key=[(m.location||[])[0],(m.location||[])[1],type,m.modifier].join('|');
+  if(navSpoken.key!==key)navSpoken={key,done:new Set()};
+  const trivial=(type==='continue'||type==='new name')&&(!m.modifier||m.modifier==='straight');
+  const stage=meters<=90?'now':meters<=230?'m200':meters<=550?'m500':meters>=900?'far':null;
+  if(!stage||navSpoken.done.has(stage))return;
+  const order=['far','m500','m200','now'];
+  order.slice(0,order.indexOf(stage)+1).forEach(s=>navSpoken.done.add(s));
+  if(trivial&&stage!=='far')return;
+  const arrive=type==='arrive',act=navSpokenManeuver(step);
+  let text;
+  if(stage==='far')text='Continue straight for '+navSpokenDistance(meters)+'.';
+  else if(stage==='now')text=arrive?'You have arrived.':act.charAt(0).toUpperCase()+act.slice(1)+' now.';
+  else{const d=Math.max(100,Math.min(stage==='m500'?500:200,Math.round(meters/50)*50));text=arrive?`Your destination is in ${d} metres.`:`In ${d} metres, ${act}.`}
+  speakNav(text);
+}
+function navMissedTurn(){
+  speakNav('You have missed your turn. Finding a route to rejoin.');
+  navLastRouteAt=0;if(navOpen)navFetchDirections();
+}
+const agoText=sec=>{const m=Math.floor(sec/60);return m<1?'just now':m<60?m+' min ago':Math.floor(m/60)+' h '+(m%60)+' min ago'};
+function skeletonBlock(n=3,cls=''){const f=document.createDocumentFragment();for(let i=0;i<n;i++)f.append(mk('div','skeleton '+cls));return f}
+
+// ===== NEW: SOS / breakdown =====
+const sosActive={},sosMarkers={};
+const mySos=()=>!!sosActive[socket.id];
+function renderSos(){
+  const ids=Object.keys(sosActive),list=$('sosList');list.replaceChildren();$('sosPanel').hidden=!ids.length;
+  ids.forEach(id=>{
+    const s=sosActive[id],mine=id===socket.id,hasPos=Number.isFinite(s.lat)&&Number.isFinite(s.lon);
+    const row=reportRow(`${mine?'You':s.name} · needs help`,`Sent ${fmtClock(s.at)}${hasPos?'':' · location unavailable'}`,'SOS','off',hasPos?{label:'Show on map',run:()=>focusOn(s.lat,s.lon)}:null);
+    if(mine){const b=mk('button','secondary','Cancel my SOS');b.style.cssText='display:block;margin:8px 0 0 auto;padding:7px 9px;font-size:11px';b.onclick=()=>sendSos('cleared');row.lastChild.append(b)}
+    list.append(row);
+  });
+  Object.keys(sosMarkers).forEach(id=>{if(!sosActive[id]){sosMarkers[id].remove();delete sosMarkers[id]}});
+  if(map)ids.forEach(id=>{
+    const s=sosActive[id];if(!Number.isFinite(s.lat)||!Number.isFinite(s.lon))return;
+    if(!sosMarkers[id])sosMarkers[id]=new maplibregl.Marker({element:mk('div','sos-pin','🆘 '+s.name)}).setLngLat([s.lon,s.lat]).addTo(map);
+  });
+  ['sosButton','navSos'].forEach(id=>{const b=$(id);if(b)b.classList.toggle('sos-on',mySos())});
+}
+function sendSos(state){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  if(state==='active'&&!confirm('Send an SOS with your location to everyone in the convoy?'))return;
+  socket.emit('sos',{state,lat:lastGps?.lat,lon:lastGps?.lon},res=>{if(!res||!res.ok)showBanner('<b>SOS not sent</b>'+esc(res?.error||'Try again.'),'warn',8000)});
+}
+const toggleSos=()=>sendSos(mySos()?'cleared':'active');
+$('sosButton').onclick=toggleSos;$('navSos').onclick=toggleSos;
+socket.on('sos',m=>{
+  if(!m||!m.id)return;
+  const mine=m.id===socket.id,who=mine?'You':esc(m.name||'A driver');
+  if(m.state==='active'){
+    sosActive[m.id]={name:m.name||'Driver',lat:m.lat==null?NaN:Number(m.lat),lon:m.lon==null?NaN:Number(m.lon),at:m.at||Date.now()};
+    showBanner(mine?'<b>SOS sent</b>Your position was shared with the convoy.':`<b>🆘 ${who} needs help</b>Open the Map tab to see where.`,'',15000);
+    if(!mine)announce(`S O S. ${m.name||'A driver'} needs help.`,[600,150,600,150,600]);
+  }else{
+    if(!sosActive[m.id])return;
+    delete sosActive[m.id];
+    showBanner(`<b>SOS cleared</b>${who} ${mine?'cancelled the':'is no longer asking for help.'}${mine?' SOS.':''}`,'ok',5000);
+  }
+  renderSos();
+});
+
+// ===== NEW: quick replies =====
+const QUICK=[['Need a break','☕'],['Fuel low','⛽'],['Slow down','🐢'],['On my way','🚗'],['Need to stop soon','🛑'],['All good','👍']];
+const quickLog=[];
+function renderQuickLog(){
+  const box=$('quickLog');box.replaceChildren();
+  if(!quickLog.length){box.append(mk('p','subtitle','No messages yet.'));return}
+  quickLog.slice().reverse().slice(0,20).forEach(m=>{
+    const emoji=(QUICK.find(q=>q[0]===m.text)||[])[1]||'';
+    const row=mk('div','row'),left=mk('div');
+    left.append(mk('b','',m.memberId===socket.id?'You':m.name),document.createElement('br'),mk('small','',`${emoji} ${m.text}`.trim()));
+    row.append(left,mk('small','',fmtClock(m.at)));box.append(row);
+  });
+}
+function sendQuick(text){
+  if(!session){showBanner('<b>No active trip</b>Create or join a convoy first.','warn',4500);return}
+  socket.emit('quick-message',{text},res=>{
+    if(res&&res.ok)showBanner('<b>Sent</b>'+esc(text),'ok',2000);
+    else showBanner('<b>Not sent</b>'+esc(res?.error||'Try again.'),'warn',3500);
+  });
+}
+QUICK.forEach(([text,emoji])=>{const b=mk('button','',`${emoji} ${text}`);b.onclick=()=>sendQuick(text);$('quickGrid').append(b)});
+socket.on('quick-message',m=>{
+  if(!m)return;
+  quickLog.push(m);if(quickLog.length>30)quickLog.shift();renderQuickLog();
+  if(m.memberId!==socket.id){showBanner(`<b>${esc(m.name)}</b>${esc(m.text)}`,'warn',6000);announce(`${m.name}: ${m.text}`,[150,80,150])}
+});
+socket.on('quick-history',list=>{quickLog.length=0;(Array.isArray(list)?list:[]).forEach(m=>quickLog.push(m));renderQuickLog()});
+
+// ===== NEW: read-only live link =====
+$('shareLive').onclick=async()=>{
+  const token=pendingTrip?.viewToken;
+  if(!token){showBanner('<b>Live link unavailable</b>Update the server to the latest index.js first.','warn',5000);return}
+  const url=location.origin+'/live/'+token,text='Follow our convoy live (read-only): '+url;
+  try{
+    if(navigator.share)await navigator.share({title:'ONEROUTE live view',text,url});
+    else{await navigator.clipboard.writeText(url);showBanner('<b>Live link copied</b>Anyone with it can watch the convoy.','ok',5000)}
+  }catch(e){if(e.name!=='AbortError')window.prompt('Copy live link',url)}
+};
+
+// ===== NEW: voice waveform =====
+let waveCtx=null,waveRaf=0;
+function startWave(stream){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    waveCtx=new AC();const analyser=waveCtx.createAnalyser();analyser.fftSize=64;
+    waveCtx.createMediaStreamSource(stream).connect(analyser);
+    const data=new Uint8Array(analyser.frequencyBinCount),canvases=['mapWave','chatWave'].map($).filter(Boolean);
+    canvases.forEach(c=>c.classList.add('live'));
+    const draw=()=>{
+      analyser.getByteFrequencyData(data);
+      canvases.forEach(c=>{const g=c.getContext('2d'),bars=24,w=c.width/bars;g.clearRect(0,0,c.width,c.height);
+        for(let i=0;i<bars;i++){const v=data[Math.floor(i*data.length/bars)]/255,h=Math.max(3,v*c.height);g.fillStyle='#f4c430';g.fillRect(i*w+2,(c.height-h)/2,w-4,h)}});
+      waveRaf=requestAnimationFrame(draw);
+    };
+    draw();
+  }catch{}
+}
+function stopWave(){
+  cancelAnimationFrame(waveRaf);
+  if(waveCtx){waveCtx.close().catch(()=>{});waveCtx=null}
+  ['mapWave','chatWave'].forEach(id=>{const c=$(id);if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);c.classList.remove('live')}});
+}
+
+// ===== NEW: arrival confetti =====
+const confetti={parts:[],raf:0};
+function burstConfetti(n=120){
+  if(REDUCED)return;
+  const c=$('confetti');if(!c)return;c.width=innerWidth;c.height=innerHeight;const g=c.getContext('2d');
+  const colors=['#f4c430','#42c786','#6aa8ff','#f05b57','#f5f3eb'];
+  for(let i=0;i<n;i++)confetti.parts.push({x:innerWidth/2+(Math.random()-.5)*innerWidth*.4,y:innerHeight*.35,vx:(Math.random()-.5)*10,vy:-Math.random()*11-3,s:5+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:colors[i%colors.length],life:0});
+  if(confetti.raf)return;
+  const step=()=>{
+    g.clearRect(0,0,c.width,c.height);
+    confetti.parts=confetti.parts.filter(p=>p.life<220&&p.y<c.height+20);
+    confetti.parts.forEach(p=>{p.life++;p.vy+=.28;p.x+=p.vx;p.y+=p.vy;p.vx*=.99;p.r+=p.vr;g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.globalAlpha=Math.max(0,1-p.life/220);g.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);g.restore()});
+    if(confetti.parts.length)confetti.raf=requestAnimationFrame(step);else{confetti.raf=0;g.clearRect(0,0,c.width,c.height)}
+  };
+  confetti.raf=requestAnimationFrame(step);
+}
+let myArrivedShown=false,allArrivedShown=false;
+function checkArrivals(cars){
+  const me=cars.find(c=>c.id===socket.id),all=cars.length>1&&cars.every(c=>c.status==='arrived');
+  if(me&&me.status==='arrived'&&!myArrivedShown){myArrivedShown=true;burstConfetti(100);announce('You have arrived',[200,100,200]);showBanner('<b>You have arrived 🏁</b>Nice driving.','ok',6000)}
+  if(me&&me.status!=='arrived')myArrivedShown=false;
+  if(all&&!allArrivedShown){allArrivedShown=true;burstConfetti(220);announce('Everyone has arrived',[300,150,300]);showBanner('<b>Everyone has arrived 🎉</b>The whole convoy made it.','ok',9000)}
+  if(!all)allArrivedShown=false;
+}
+
+// ===== NEW: export trip report (image or PDF) =====
+let lastSummary=null;
+function buildReportCanvas(){
+  const s=lastSummary;if(!s)return null;
+  const W=1000,pad=40,lines=[];
+  const add=(t,o={})=>lines.push({t:String(t),size:o.size||20,color:o.color||'#f5f3eb',bold:!!o.bold,gap:o.gap??8});
+  const addWrapped=(t,o={},max=88)=>{const words=String(t).split(' ');let line='';words.forEach(w=>{if((line+' '+w).trim().length>max){add(line,{...o,gap:2});line=w}else line=(line+' '+w).trim()});if(line)add(line,o)};
+  const t=s.totals||{};
+  add('ONEROUTE · Trip report',{size:34,color:'#f4c430',bold:true,gap:12});
+  add('Destination: '+(pendingTrip?.destination?.label||'Destination'),{size:22,bold:true});
+  add('Generated '+new Date().toLocaleString()+' · '+s.totalKm+' km route',{size:16,color:'#9ca3af',gap:22});
+  add(`Separations: ${t.separations||0}    Longest: ${t.longestMs?fmtDur(t.longestMs):'-'}    Time stopped: ${t.haltMs?fmtDur(t.haltMs):'-'}`,{size:20,bold:true,gap:24});
+  add('Who got separated',{size:24,color:'#f4c430',bold:true,gap:10});
+  const seps=s.separations||[];
+  if(!seps.length)add('No one got separated.',{color:'#9ca3af',gap:18});
+  seps.forEach(e=>{
+    add(`${e.name} · ${e.type==='off-route'?'Missed a turn':'Fell behind'}${e.endedAt?'':' (ongoing)'}`,{bold:true,gap:3});
+    let d=`${fmtClock(e.startedAt)} · km ${e.atKm} of ${s.totalKm} · ${fmtDur(e.durationMs)}`;
+    if(e.type==='behind'&&e.maxGapKm)d+=` · up to ${Number(e.maxGapKm).toFixed(1)} km behind`;
+    if(e.endReason==='disconnected')d+=' · lost signal';else if(e.type==='off-route'&&e.rejoinKm!=null)d+=` · rejoined at km ${e.rejoinKm}`;
+    addWrapped(d,{size:16,color:'#b8c0cc',gap:14});
+  });
+  add('Arrivals',{size:24,color:'#f4c430',bold:true,gap:10});
+  const members=s.members||[],arrived=members.filter(m=>m.arrivedAt).sort((a,b)=>a.arrivedAt-b.arrivedAt);
+  arrived.forEach((m,i)=>add(`${i+1}. ${m.name} · ${fmtClock(m.arrivedAt)}${i?' · +'+fmtDur(m.arrivedAt-arrived[0].arrivedAt):' · first to arrive'}`,{gap:6}));
+  members.filter(m=>!m.arrivedAt).forEach(m=>add(`${m.name} · ${m.online?'still on the way':'offline'}`,{color:'#9ca3af',gap:6}));
+  if(!members.length)add('No drivers recorded.',{color:'#9ca3af'});
+  add('Stops',{size:24,color:'#f4c430',bold:true,gap:10});
+  const hs=s.halts||[];
+  if(!hs.length)add('No stops announced.',{color:'#9ca3af'});
+  hs.forEach(h=>add(`${h.name} · ${fmtClock(h.startedAt)} · ${fmtDur(h.durationMs)}`,{gap:6}));
+  let height=pad*2;lines.forEach(l=>height+=l.size*1.35+l.gap);
+  const c=document.createElement('canvas');c.width=W;c.height=Math.ceil(height);
+  const g=c.getContext('2d');g.fillStyle='#17191d';g.fillRect(0,0,W,c.height);
+  let y=pad;
+  lines.forEach(l=>{y+=l.size;g.font=`${l.bold?'700 ':''}${l.size}px system-ui,sans-serif`;g.fillStyle=l.color;g.fillText(l.t,pad,y,W-pad*2);y+=l.size*.35+l.gap});
+  return c;
+}
+function withFreshSummary(done){
+  if(!session){done();return}
+  let finished=false;const finish=()=>{if(!finished){finished=true;done()}};
+  setTimeout(finish,3000);
+  socket.emit('get-summary',res=>{if(res&&res.ok)renderSummary(res.summary);finish()});
+}
+$('reportPng').onclick=()=>withFreshSummary(()=>{
+  const c=buildReportCanvas();
+  if(!c){showBanner('<b>No report yet</b>Join a trip and wait for the first update.','warn',4000);return}
+  c.toBlob(blob=>{
+    if(!blob)return;
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='oneroute-trip-report.png';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  });
+});
+$('reportPdf').onclick=()=>withFreshSummary(()=>{
+  const old=document.title;document.title='ONEROUTE trip report';
+  window.print();setTimeout(()=>{document.title=old},1500);
+});
+
+// Voice messages: short audio recordings are relayed by the server to this trip.
+let voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceRecording=false,voiceTimer=null,voiceClockInterval=null,voiceStartedAt=0;
+const MAX_VOICE_MS=30000, MAX_AUDIO_BYTES=700000;
+function setVoiceStatus(message){
+  ['mapTalkStatus','chatTalkStatus'].forEach(id=>{const el=$(id);if(!el)return;el.className='voice-status';const text=String(message||'');if(/recording/i.test(text))el.classList.add('recording');else if(/sending|prepar/i.test(text))el.classList.add('sending');else if(/sent/i.test(text))el.classList.add('success');el.replaceChildren();const dot=document.createElement('span');dot.className='status-dot';const label=document.createElement('span');label.textContent=text||'Ready when you are';el.append(dot,label)});
+}
+function updateVoiceClock(){const elapsed=Math.min(MAX_VOICE_MS,Math.max(0,Date.now()-voiceStartedAt));const value=Math.floor(elapsed/1000);const formatted='00:'+String(value).padStart(2,'0');['mapTalkTimer','chatTalkTimer'].forEach(id=>{const el=$(id);if(el)el.textContent=formatted})}
+function setVoiceButtons(recording){
+  voiceRecording=recording;
+  ['mapTalkButton','chatTalkButton'].forEach(id=>{const b=$(id);if(!b)return;b.classList.toggle('recording',recording);b.setAttribute('aria-pressed',String(recording));b.innerHTML=recording?'<span class="voice-button-icon">■</span><span>Release to send</span>':'<span class="voice-button-icon">🎙</span><span>Hold to talk</span>'});
+  ['mapVoiceConsole','chatVoiceConsole'].forEach(id=>{const el=$(id);if(el)el.classList.toggle('recording',recording)});
+  document.querySelectorAll('.voice-live-dot').forEach(el=>el.classList.toggle('recording',recording));
+  if(recording){voiceStartedAt=Date.now();updateVoiceClock();clearInterval(voiceClockInterval);voiceClockInterval=setInterval(updateVoiceClock,200)}else{clearInterval(voiceClockInterval);voiceClockInterval=null}
+}
+function renderVoiceMessage(message){
+  if(!message||!message.audio||!message.mimeType)return;
+  const list=$('voiceMessages');if(!list)return;
+  const card=document.createElement('div');card.className='card';
+  const heading=document.createElement('h2');heading.textContent=(message.name||'Convoy member')+' · Voice message';
+  const meta=document.createElement('p');meta.className='subtitle';meta.textContent=message.timestamp?new Date(message.timestamp).toLocaleString():'Just now';
+  const audio=document.createElement('audio');audio.controls=true;audio.preload='metadata';audio.style.width='100%';audio.src='data:'+message.mimeType+';base64,'+message.audio;
+  card.append(heading,meta,audio);list.prepend(card);
+  while(list.children.length>50)list.lastElementChild.remove();
+}
+socket.on('voice-history',messages=>{const list=$('voiceMessages');if(!list)return;list.replaceChildren();if(Array.isArray(messages))messages.forEach(renderVoiceMessage)});
+socket.on('voice-message',message=>renderVoiceMessage(message));
+socket.on('voice-error',message=>setVoiceStatus(String(message||'Voice message could not be sent.')));
+async function startVoiceRecording(){
+  if(!session){setVoiceStatus('Create or join a trip before recording.');return}
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setVoiceStatus('Voice recording is not supported in this browser. Use HTTPS or localhost.');return}
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});voiceChunks=[];
+    const mimeCandidates=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+    const mimeType=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
+    voiceRecorder=new MediaRecorder(voiceStream,mimeType?{mimeType,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000});
+    voiceRecorder.ondataavailable=event=>{if(event.data&&event.data.size)voiceChunks.push(event.data)};
+    voiceRecorder.onerror=()=>setVoiceStatus('Recording failed. Please try again.');
+    voiceRecorder.onstop=async()=>{
+      clearTimeout(voiceTimer);voiceTimer=null;clearInterval(voiceClockInterval);voiceClockInterval=null;
+      const recorder=voiceRecorder;voiceRecorder=null;
+      if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}
+      setVoiceButtons(false);stopWave();setTimeout(playNextVoice,400);
+      try{
+        const blob=new Blob(voiceChunks,{type:recorder?.mimeType||'audio/webm'});voiceChunks=[];
+        if(!blob.size){setVoiceStatus('No audio captured. Try again.');return}
+        if(blob.size>MAX_AUDIO_BYTES){setVoiceStatus('Recording is too large. Please record a shorter message.');return}
+        setVoiceStatus('Sending voice message…');
+        const reader=new FileReader();reader.onload=()=>{
+          const dataUrl=String(reader.result||'');const comma=dataUrl.indexOf(',');
+          if(comma<0){setVoiceStatus('Could not prepare the recording.');return}
+          lastSentAudio=dataUrl.slice(comma+1);
+          socket.emit('voice-message',{audio:dataUrl.slice(comma+1),mimeType:blob.type||'audio/webm'},result=>{
+            if(result&&result.ok)setVoiceStatus('Voice message sent.');else setVoiceStatus(result?.error||'Could not send voice message.');
+          });
+        };reader.onerror=()=>setVoiceStatus('Could not read the recording.');reader.readAsDataURL(blob);
+      }catch(error){setVoiceStatus('Could not send the recording. Please try again.')}
+    };
+    if(voiceCurrent){voicePlayer.onended=voicePlayer.onerror=null;try{voicePlayer.pause()}catch{}voiceQueue.unshift(voiceCurrent);voiceCurrent=null;voicePlaying=false}$('voiceToast').hidden=true;
+    startWave(voiceStream);voiceRecorder.start();voiceRecording=true;setVoiceButtons(true);setVoiceStatus('Recording… release to send (or tap the mic again).');
+    voiceTimer=setTimeout(()=>stopVoiceRecording(),MAX_VOICE_MS);
+  }catch(error){if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null}setVoiceStatus(error?.name==='NotAllowedError'?'Microphone permission denied. Allow microphone access and try again.':'Could not access the microphone. Check browser permissions and HTTPS.');}
+}
+function stopVoiceRecording(){if(voiceRecorder&&voiceRecorder.state!=='inactive'){clearTimeout(voiceTimer);voiceTimer=null;voiceRecorder.stop();voiceRecording=false}}
+function toggleVoiceRecording(){if(voiceRecorder&&voiceRecorder.state==='recording')stopVoiceRecording();else startVoiceRecording()}
+// ===== NEW: press-and-hold to talk. Hold + release sends; a quick tap still starts, and the next tap stops and sends. =====
+const HOLD_MS=350;
+['mapTalkButton','chatTalkButton'].forEach(id=>{
+  const button=$(id);if(!button)return;
+  let downAt=0,pressActive=false,ignoreUp=false,starting=false,releasedEarly=false;
+  button.addEventListener('contextmenu',e=>e.preventDefault());
+  button.addEventListener('pointerdown',async e=>{
+    if(e.button!==undefined&&e.button!==0)return;
+    e.preventDefault();
+    try{button.setPointerCapture(e.pointerId)}catch{}
+    unlockMedia();
+    pressActive=true;downAt=Date.now();releasedEarly=false;ignoreUp=false;
+    if(voiceRecorder&&voiceRecorder.state==='recording'){ignoreUp=true;stopVoiceRecording();return}
+    starting=true;
+    await startVoiceRecording();
+    starting=false;
+    // Released while the mic was still starting: stop now, unless a permission prompt delayed it (then stay in tap mode).
+    if(releasedEarly&&Date.now()-downAt<1500)stopVoiceRecording();
+  });
+  const release=()=>{
+    if(!pressActive)return;pressActive=false;
+    if(ignoreUp){ignoreUp=false;return}
+    if(Date.now()-downAt>=HOLD_MS){if(starting)releasedEarly=true;else stopVoiceRecording()}
+    else if(voiceRecording||starting)setVoiceStatus('Recording… tap the mic again to stop and send.');
+  };
+  button.addEventListener('pointerup',release);
+  button.addEventListener('pointercancel',release);
+  // Keyboard (Enter/Space) still toggles; pointer-generated clicks are ignored because pointer events handle them.
+  button.addEventListener('click',e=>{if(e.detail===0)toggleVoiceRecording()});
+});
+
+// ===== NEW: auto-play incoming voice messages (one shared player so one tap unlocks it) =====
+const voicePlayer=new Audio();voicePlayer.preload='auto';
+let voiceQueue=[],voiceCurrent=null,voicePlaying=false,voiceWatchdog=null,lastSentAudio='',voiceUnlocked=false,voiceToastTimer=null;
+const SAFE_AUDIO=/^audio\/[a-z0-9.+-]+(;\s*codecs=[a-z0-9.,"' -]+)?$/i;
+const SILENT_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+function unlockMedia(){
+  if(!voiceUnlocked){
+    voiceUnlocked=true;
+    try{
+      voicePlayer.muted=true;voicePlayer.src=SILENT_WAV;
+      const restore=()=>{if(voicePlayer.src===SILENT_WAV)voicePlayer.pause();voicePlayer.muted=false};
+      const p=voicePlayer.play();
+      if(p&&p.then)p.then(restore).catch(()=>{voicePlayer.muted=false;voiceUnlocked=false});else restore();
+    }catch{voicePlayer.muted=false}
+  }
+  if(!speechUnlocked&&speechOK){speechUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{}}
+}
+['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,unlockMedia,{passive:true}));
+function duckVoice(on){try{voicePlayer.volume=on?0.2:1}catch{}}
+function voiceToast(html,sticky){
+  const t=$('voiceToast');t.innerHTML=html;t.hidden=false;clearTimeout(voiceToastTimer);
+  if(!sticky)voiceToastTimer=setTimeout(()=>{t.hidden=true},3500);
+}
+function playNextVoice(){
+  if(voicePlaying||voiceRecording||!voiceQueue.length)return;
+  const m=voiceQueue.shift();voiceCurrent=m;voicePlaying=true;
+  const finish=(failed)=>{
+    clearTimeout(voiceWatchdog);
+    voicePlayer.onended=voicePlayer.onerror=null;voiceCurrent=null;voicePlaying=false;
+    if(failed===true)voiceToast('<b>🎙 '+esc(m.name||'Convoy member')+'</b><span>Voice message arrived but this phone could not play it. Open the Chat tab to try.</span>');
+    else if(voiceQueue.length)playNextVoice();else voiceToast('<b>🎙 '+esc(m.name||'Convoy member')+'</b><span>Voice message finished</span>');
+    if(failed===true&&voiceQueue.length)setTimeout(playNextVoice,1500);
+  };
+  const baseType=String(m.mimeType).split(';')[0].trim().toLowerCase();
+  if(typeof voicePlayer.canPlayType==='function'&&!voicePlayer.canPlayType(baseType)){finish(true);return}
+  voicePlayer.muted=false;voicePlayer.volume=1;
+  voicePlayer.src='data:'+m.mimeType+';base64,'+m.audio;
+  voicePlayer.onended=()=>finish();voicePlayer.onerror=()=>finish(true);
+  clearTimeout(voiceWatchdog);voiceWatchdog=setTimeout(()=>finish(),45000);
+  voiceToast('<b>🎙 '+esc(m.name||'Convoy member')+'</b><span>Voice message playing…</span>',true);
+  const p=voicePlayer.play();
+  if(p&&p.catch)p.catch(err=>{
+    voicePlayer.onended=voicePlayer.onerror=null;voiceCurrent=null;voicePlaying=false;
+    if(err&&err.name==='AbortError'&&!m.retried){m.retried=true;voiceQueue.unshift(m);setTimeout(playNextVoice,300);return}
+    voiceQueue.unshift(m);
+    voiceToast('<button id="voiceTapPlay">▶ Tap to hear '+esc(m.name||'voice message')+'</button>',true);
+    $('voiceTapPlay').onclick=()=>{$('voiceToast').hidden=true;playNextVoice()};
+  });
+}
+// Live messages only (history replays on join are never auto-played). Own message echoed back is skipped.
+socket.on('voice-message',m=>{
+  if(!m||typeof m.audio!=='string'||!m.audio||!SAFE_AUDIO.test(String(m.mimeType||'')))return;
+  if(m.audio===lastSentAudio||(m.id&&m.id===socket.id))return;
+  voiceQueue.push({name:m.name,audio:m.audio,mimeType:m.mimeType});
+  while(voiceQueue.length>5)voiceQueue.shift();
+  playNextVoice();
+});
+
 const name=()=>$('name').value.trim()||'Driver';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function setMsg(s){$('msg').textContent=s||''}
@@ -285,18 +1296,41 @@ function geoError(e){
   if(e.code===2)return 'Could not get GPS. Try outside with GPS enabled.';
   return 'Location timed out. Please try again.';
 }
+// ===== NEW: thinking orb while the app is working (page keeps working if /orb.js is missing) =====
+const orbReduced=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+function orbMount(el,state,label){try{return window.OneRouteOrb?OneRouteOrb.mount(el,{state,size:64,paused:orbReduced(),label}):null}catch{return null}}
+function busyStart(label,state,hint,onTimeout){
+  const box=$('busy'),orbEl=box.querySelector('.busy-orb');
+  $('busyLabel').textContent=label;$('busyHint').textContent=hint||'';box.hidden=false;
+  const orb=orbMount(orbEl,state,label);
+  let done=false;
+  const job={
+    label(text,nextState){$('busyLabel').textContent=text;if(orb)orb.update({state:nextState||state,label:text})},
+    stop(){if(done)return;done=true;clearTimeout(timer);box.hidden=true;if(orb)orb.unmount();orbEl.replaceChildren()},
+  };
+  const timer=setTimeout(()=>{if(done)return;job.stop();(onTimeout||(()=>setMsg('This is taking longer than expected. Check your connection and try again.')))()},40000);
+  return job;
+}
+function orbRow(host,label,state){
+  const row=document.createElement('div');row.className='orb-row';
+  const orbEl=document.createElement('div');orbEl.className='busy-orb';
+  const text=document.createElement('span');text.textContent=label;
+  row.append(orbEl,text);host.replaceChildren(row);
+  const orb=orbMount(orbEl,state,label);
+  return{stop(){if(orb)orb.unmount();row.remove()}};
+}
 $('search').onclick=async()=>{
   const q=$('dest').value.trim();if(!q)return setMsg('Enter a destination.');
-  setMsg('Searching…');$('results').innerHTML='';chosen=null;
+  setMsg('');const searchOrb=orbRow($('results'),'Searching places…','searching');chosen=null;
   try{
-    const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();
-    const list=await r.json();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
+    const r=await fetch('/geocode?q='+encodeURIComponent(q),{headers:authHeaders()});if(!r.ok)throw Error();
+    const list=await r.json();searchOrb.stop();$('results').replaceChildren();if(!list.length)setMsg('No places found. Try a more specific name.');else setMsg('');
     list.forEach(place=>{
       const b=document.createElement('button');b.textContent=place.label;
       b.onclick=()=>{chosen=place;[...$('results').children].forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};
       $('results').appendChild(b);
     });
-  }catch{setMsg('Search failed. Check your internet and server.')}
+  }catch{searchOrb.stop();$('results').replaceChildren();setMsg('Search failed. Check your internet and server.')}
 };
 $('dest').addEventListener('keydown',e=>{if(e.key==='Enter')$('search').click()});
 $('code').addEventListener('input',()=>{$('code').value=$('code').value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
@@ -304,17 +1338,19 @@ $('code').addEventListener('input',()=>{$('code').value=$('code').value.toUpperC
 $('create').onclick=()=>{
   if(!chosen)return setMsg('Search for a destination and select a result.');
   if(!navigator.geolocation)return setMsg('This browser does not support GPS.');
-  setMsg('Getting your location…');
+  setMsg('');const job=busyStart('Getting your location…','working','Allow location if your browser asks.');
   navigator.geolocation.getCurrentPosition(pos=>{
-    setMsg('Building route…');
+    job.label('Building your route…');
     socket.emit('create-trip',{name:name(),start:{lat:pos.coords.latitude,lon:pos.coords.longitude},destination:chosen},res=>{
-      if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.');
+      job.stop();if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.');
     });
-  },e=>setMsg(geoError(e)),{enableHighAccuracy:true,timeout:15000});
+  },e=>{job.stop();setMsg(geoError(e))},{enableHighAccuracy:true,timeout:15000});
 };
 $('join').onclick=()=>{
   const code=$('code').value.trim().toUpperCase();if(code.length!==4)return setMsg('Enter the 4-letter trip code.');
+  const job=busyStart('Joining the convoy…','connecting');
   socket.emit('join-trip',{code,name:name()},res=>{
+    job.stop();
     if(res&&res.ok)startApp(res);else setMsg(res?.error||'Could not join this trip.');
   });
 };
@@ -335,11 +1371,11 @@ function drawPlannerRoute(){
   const bounds=new maplibregl.LngLatBounds(coords[0],coords[0]);coords.forEach(c=>bounds.extend(c));plannerMap.fitBounds(bounds,{padding:45,duration:0});
 }
 function renderPlannerStops(){const list=$('plannerStops');list.replaceChildren();plannedWaypoints.forEach((w,i)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('span');label.textContent=`${i+1}. ${w.label||w.name||'Waypoint'}`;const b=document.createElement('button');b.className='remove-stop';b.textContent='Remove';b.onclick=()=>{plannedWaypoints.splice(i,1);renderPlannerStops();drawPlannerRoute()};row.append(label,b);list.appendChild(row)});if(!plannedWaypoints.length){const p=document.createElement('p');p.className='subtitle';p.textContent='No stops added yet.';list.appendChild(p)}}
-$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren();try{const r=await fetch('/geocode?q='+encodeURIComponent(q));if(!r.ok)throw Error();const results=await r.json();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
+$('searchWaypoint').onclick=async()=>{const q=$('waypointSearch').value.trim();if(!q)return $('plannerMessage').textContent='Enter a place to search.';$('plannerMessage').textContent='Searching…';$('waypointResults').replaceChildren(skeletonBlock(3));try{const r=await fetch('/geocode?q='+encodeURIComponent(q),{headers:authHeaders()});if(!r.ok)throw Error();const results=await r.json();$('waypointResults').replaceChildren();if(!Array.isArray(results)||!results.length){$('plannerMessage').textContent='No places found.';return}$('plannerMessage').textContent='Select a result to add it as a stop.';results.forEach(place=>{const b=document.createElement('button');b.textContent=place.label;b.onclick=()=>{const lon=Number(place.lon),lat=Number(place.lat);if(!Number.isFinite(lon)||!Number.isFinite(lat))return;if(plannedWaypoints.some(w=>Number(w.lon)===lon&&Number(w.lat)===lat))return;plannedWaypoints.push({label:place.label,lon,lat});renderPlannerStops();drawPlannerRoute();$('plannerMessage').textContent='Stop added.'};$('waypointResults').appendChild(b)})}catch{$('waypointResults').replaceChildren();$('plannerMessage').textContent='Search failed. Check your connection and server.'}};
 $('waypointSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('searchWaypoint').click()});
 $('backToSetup').onclick=()=>{$('planner').hidden=true;$('setup').hidden=false;if(plannerMap){plannerMap.remove();plannerMap=null}};
 $('editWaypoints').onclick=()=>{if(!pendingTrip){showBanner('<b>Route editing</b>Create a trip first to edit stops.','warn',5000);return}$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap.resize(),80)};
-$('startPlannedTrip').onclick=()=>{if(!pendingTrip)return;if(!plannedWaypoints.length){startApp({...pendingTrip,waypoints:[]});return}$('plannerMessage').textContent='Saving stops to the trip…';socket.emit('update-waypoints',{code:pendingTrip.code,waypoints:plannedWaypoints},res=>{if(!res||!res.ok){$('plannerMessage').textContent=res?.error||'Server support for saving waypoints is not installed yet. Add update-waypoints to index.js.';return}pendingTrip={...pendingTrip,...res,waypoints:res.waypoints||plannedWaypoints};startApp(pendingTrip)})};
+$('startPlannedTrip').onclick=()=>{if(!pendingTrip)return;if(!plannedWaypoints.length){startApp({...pendingTrip,waypoints:[]});return}$('plannerMessage').textContent='Saving stops to the trip…';const job=busyStart('Rebuilding your route…','working','Adding your stops to the road route.',()=>{$('plannerMessage').textContent='This is taking longer than expected. Try again.'});socket.emit('update-waypoints',{code:pendingTrip.code,waypoints:plannedWaypoints},res=>{job.stop();if(!res||!res.ok){$('plannerMessage').textContent=res?.error||'Server support for saving waypoints is not installed yet. Add update-waypoints to index.js.';return}pendingTrip={...pendingTrip,...res,waypoints:res.waypoints||plannedWaypoints};startApp(pendingTrip)})};
 function renderUpcomingWaypoints(waypoints=[]){const list=$('waypointsList');list.replaceChildren();$('emptyWaypoints').hidden=waypoints.length>0;waypoints.forEach((w,i)=>{const card=document.createElement('div');card.className='waypoint-card';const icon=document.createElement('div');icon.className='waypoint-icon';icon.textContent='P';const info=document.createElement('div');info.className='waypoint-info';const title=document.createElement('strong');title.textContent=w.label||w.name||`Waypoint ${i+1}`;const detail=document.createElement('p');detail.textContent=w.description||(i===0?'Next planned stop':'Planned rally check');const distance=document.createElement('div');distance.className='waypoint-distance';const d=Number(w.distanceKm);distance.textContent=Number.isFinite(d)?d.toFixed(1):'—';const small=document.createElement('small');small.textContent=Number.isFinite(d)?'KM':'DISTANCE';distance.appendChild(small);info.append(title,detail);card.append(icon,info,distance);list.appendChild(card)})}
 socket.on('waypoints',waypoints=>{if(Array.isArray(waypoints)){plannedWaypoints=waypoints;renderUpcomingWaypoints(waypoints)}});
 socket.on('route-updated',update=>{
@@ -386,7 +1422,29 @@ function startApp(res){
     }
   });
   startSharing();showScreen('map');
+  Object.keys(sosMarkers).forEach(id=>{sosMarkers[id].remove();delete sosMarkers[id]});renderSos();
 }
+
+// Full-screen navigation: uses OSRM turn instructions and mirrors the live Socket.IO convoy.
+function navDestination(){return pendingTrip?.destination||chosen||null;}
+function navFormatDistance(m){if(!Number.isFinite(m))return '—';if(m<1000)return Math.max(0,Math.round(m))+' m';return (m/1000).toFixed(m<10000?1:0)+' km';}
+function navDistance(a,b){const R=6371000,rad=v=>v*Math.PI/180;const dLat=rad(b[1]-a[1]),dLon=rad(b[0]-a[0]);const x=Math.sin(dLat/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+function navManeuverIcon(type,modifier){if(type==='turn'||type==='end of road'||type==='fork'){if(modifier?.includes('left'))return '↰';if(modifier?.includes('right'))return '↱';if(modifier==='uturn')return '↶';return '↑'}if(type==='roundabout'||type==='rotary')return '⟳';if(type==='merge')return '⇢';if(type==='depart')return '↑';if(type==='arrive')return '🏁';if(type==='continue'||type==='new name')return '↑';return '↗';}
+function navManeuverText(step){const m=step?.maneuver||{},type=m.type||'continue',mod=m.modifier||'';if(type==='depart')return 'Start driving';if(type==='arrive')return 'You have arrived';if(type==='roundabout'||type==='rotary')return 'Enter the roundabout'+(mod?' and '+mod:'');if(type==='merge')return 'Merge'+(mod?' '+mod:'');if(type==='fork')return 'Keep '+(mod||'straight');if(type==='end of road')return 'At the end of the road, turn '+(mod||'ahead');if(type==='turn')return (mod==='slight left'?'Turn slightly left':mod==='slight right'?'Turn slightly right':mod==='sharp left'?'Turn sharp left':mod==='sharp right'?'Turn sharp right':mod==='uturn'?'Make a U-turn':mod==='left'?'Turn left':mod==='right'?'Turn right':'Continue');if(type==='arrive')return 'You have arrived';return 'Continue straight';}
+function navEnsureMap(){if(navMap)return;navMap=new maplibregl.Map({container:'navMap',center:lastGps?[lastGps.lon,lastGps.lat]:(pendingTrip?.route?.[0]||[77.6,13]),zoom:15,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});navMap.addControl(new maplibregl.NavigationControl(),'top-right');navMap.on('load',()=>{navDrawRoute();navRenderCars();});}
+function navDrawRoute(){if(!navMap||!navMap.isStyleLoaded()||navRouteCoords.length<2)return;const data={type:'Feature',geometry:{type:'LineString',coordinates:navRouteCoords},properties:{}};if(navMap.getSource('nav-route'))navMap.getSource('nav-route').setData(data);else{navMap.addSource('nav-route',{type:'geojson',data});navMap.addLayer({id:'nav-route-casing',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#17191d','line-width':10}});navMap.addLayer({id:'nav-route-line',type:'line',source:'nav-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#f4c430','line-width':6}});}const bounds=new maplibregl.LngLatBounds(navRouteCoords[0],navRouteCoords[0]);navRouteCoords.forEach(c=>bounds.extend(c));navMap.fitBounds(bounds,{padding:{top:105,bottom:95,left:40,right:40},maxZoom:16,duration:500});}
+async function navFetchDirections(){const dest=navDestination();if(!dest||!Number.isFinite(Number(dest.lon))||!Number.isFinite(Number(dest.lat))){$('navInstruction').textContent='Destination coordinates unavailable';$('navRoadName').textContent='Choose a destination and start a trip first.';return;}if(!lastGps){$('navInstruction').textContent='Waiting for your GPS location';$('navRoadName').textContent='Allow location access to calculate turn-by-turn directions.';return;}const requestId=++navRouteRequest;$('navInstruction').textContent='Calculating directions…';$('navRoadName').textContent='Fetching driving route';$('navNextSteps').replaceChildren(skeletonBlock(3,'chip'));try{const start=`${lastGps.lon},${lastGps.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url);if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navStepIndex=0;navLastRouteAt=Date.now();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){if(requestId!==navRouteRequest)return;$('navNextSteps').replaceChildren();$('navInstruction').textContent='Turn-by-turn unavailable';$('navRoadName').textContent='Check internet access. The shared convoy map remains available.';$('navNotice').textContent='The routing service could not return directions. Try again when connected.';}}
+function navUpdateInstruction(){if(!navOpen||!navStepsCountExists())return;const pos=lastGps?[lastGps.lon,lastGps.lat]:null;if(!navRouteSteps.length){$('navTurnIcon').textContent='↑';$('navTurnLabel').textContent='NAVIGATION';$('navTurnDistance').innerHTML='—<small>TO TURN</small>';$('navNextSteps').innerHTML='<div class="nav-step-chip">Directions will appear once a route is available.</div>';return;}if(pos){let best=navStepIndex,bestDist=Infinity;for(let i=Math.max(0,navStepIndex);i<Math.min(navRouteSteps.length,navStepIndex+4);i++){const loc=navRouteSteps[i].maneuver?.location;if(!loc)continue;const d=navDistance(pos,loc);if(d<bestDist){bestDist=d;best=i;}}if(bestDist<65&&best<navRouteSteps.length-1){navVoiceStage(navRouteSteps[best],0);navStepIndex=Math.max(navStepIndex,best+1);}}
+const step=navRouteSteps[Math.min(navStepIndex,navRouteSteps.length-1)],maneuver=step.maneuver||{},loc=maneuver.location;let meters=loc&&pos?navDistance(pos,loc):Number(step.distance)||0;const text=navManeuverText(step);if(pos)navVoiceStage(step,meters);$('navTurnIcon').textContent=navManeuverIcon(maneuver.type,maneuver.modifier);$('navTurnLabel').textContent=navStepIndex===0?'FIRST MANEUVER':'NEXT MANEUVER';$('navInstruction').textContent=text;$('navRoadName').textContent=step.name?`onto ${step.name}`:(maneuver.type==='arrive'?'Destination reached':'Follow the highlighted route');$('navTurnDistance').innerHTML=navFormatDistance(meters)+'<small>TO TURN</small>';
+const upcoming=navRouteSteps.slice(navStepIndex+1,navStepIndex+5);$('navStepsCount').textContent=`${upcoming.length} after this`; $('navNextSteps').innerHTML=upcoming.map((st,i)=>`<div class="nav-step-chip"><b>${navManeuverIcon(st.maneuver?.type,st.maneuver?.modifier)}</b>${navManeuverText(st)}${st.name?' · '+esc(st.name):''}<br><span style="color:#9ca3af">${navFormatDistance(st.distance)}</span></div>`).join('')||'<div class="nav-step-chip">Final maneuver</div>';}
+function navStepsCountExists(){return !!$('navStepsCount');}
+function navRenderCars(){if(!navOpen)return;$('navLiveCount').textContent=`${navCars.length} vehicle${navCars.length===1?'':'s'}`;$('navConvoy').innerHTML=navCars.map(c=>{const status=c.status||'offline',color=COLORS[status]||COLORS.offline,isMe=c.id===socket.id;return `<button class="nav-person ${isMe?'me':''}" data-nav-car="${esc(c.id)}">${miniAvatarHtml(c,color)}<span><b>${esc(c.name||'Driver')}${isMe?' (you)':''}</b><small>${esc(LABEL[status]||status)}${Number.isFinite(Number(c.gapKm))&&Number(c.gapKm)>0?' · '+Number(c.gapKm).toFixed(1)+' km back':''}</small></span></button>`}).join('')||'<div class="nav-step-chip">Waiting for convoy positions…</div>';document.querySelectorAll('[data-nav-car]').forEach(b=>b.onclick=()=>{const c=navCars.find(x=>String(x.id)===b.dataset.navCar);if(c&&Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))&&navMap)navMap.flyTo({center:[Number(c.lon),Number(c.lat)],zoom:16,duration:700});});if(!navMap||!navMap.isStyleLoaded())return;const seen=new Set();navCars.forEach(c=>{if(!Number.isFinite(Number(c.lon))||!Number.isFinite(Number(c.lat)))return;seen.add(String(c.id));if(!navMarkers[c.id]){const el=document.createElement('div');el.className='nav-pin'+(c.id===socket.id?' me':'');navMarkers[c.id]=new maplibregl.Marker({element:el}).setLngLat([Number(c.lon),Number(c.lat)]).addTo(navMap);}const el=navMarkers[c.id].getElement();el.textContent=String(c.name||'?').slice(0,1).toUpperCase();paintPin(el,c);glideMarker('nav-'+c.id,navMarkers[c.id],[Number(c.lon),Number(c.lat)]);});Object.keys(navMarkers).forEach(id=>{if(!seen.has(String(id))){navMarkers[id].remove();delete navMarkers[id]}});}
+async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();setTimeout(()=>navMap?.resize(),100);$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||Date.now()-navLastRouteAt>120000)await navFetchDirections();else navUpdateInstruction();if(lastGps&&navMap)navMap.flyTo({center:[lastGps.lon,lastGps.lat],zoom:15,duration:500});}
+function closeNavigation(){navOpen=false;$('navigationScreen').hidden=true;document.body.style.overflow='';if(navMap&&map){setTimeout(()=>navMap.resize(),80)}}
+$('openNavigation').onclick=openNavigation;$('closeNavigation').onclick=closeNavigation;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&navOpen)closeNavigation();});
+window.addEventListener('resize',()=>{if(navOpen&&navMap)setTimeout(()=>navMap.resize(),80)});
+
 function clearFuelMarkers(){fuelMarkers.forEach(marker=>marker.remove());fuelMarkers=[];}
 async function loadFuelStations(lat,lon){
   if(!map||!fuelVisible)return;
@@ -439,6 +1497,7 @@ function startSharing(){
   watchId=navigator.geolocation.watchPosition(p=>{
     if(Date.now()-last<1000)return;last=Date.now();
     lastGps={lat:p.coords.latitude,lon:p.coords.longitude};
+    if(navOpen){navUpdateInstruction();if(Date.now()-navLastRouteAt>120000)navFetchDirections();if(navMap&&navMap.isStyleLoaded())navMap.easeTo({center:[lastGps.lon,lastGps.lat],duration:500});}
     const speedMps=p.coords.speed;
     $('speedValue').textContent=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):'--';
     if(fuelVisible&&Date.now()-lastFuelSearch>30000){lastFuelSearch=Date.now();loadFuelStations(lastGps.lat,lastGps.lon)}
@@ -453,6 +1512,7 @@ function showScreen(which){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+which));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.screen===which));
   if(which==='map'&&map)setTimeout(()=>map.resize(),80);
+  onSummaryScreen(which==='summary');
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showScreen(b.dataset.screen));
 $('follow').onclick=()=>{$('follow').textContent='Follow: '+((follow=!follow)?'ON':'OFF')};
@@ -469,7 +1529,10 @@ $('stop').onclick=()=>{
 socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
 
 socket.on('cars',cars=>{
-  if(!map||!Array.isArray(cars))return;
+  if(!Array.isArray(cars))return;
+  navCars=cars.slice();lastCars=cars.slice();
+  if(navOpen){navRenderCars();navUpdateInstruction();}
+  if(!map)return;
   const bounds=new maplibregl.LngLatBounds(),seen=new Set();
   $('statuscars').innerHTML='';
   let on=0,maxGap=0;
@@ -483,22 +1546,35 @@ socket.on('cars',cars=>{
         el.textContent=String(c.name||'?')[0].toUpperCase();
         markers[c.id]=new maplibregl.Marker({element:el}).setLngLat([c.lon,c.lat]).addTo(map);
       }
-      markers[c.id].setLngLat([c.lon,c.lat]);
-      markers[c.id].getElement().style.background=COLORS[c.status]||COLORS.offline;
+      // NEW: glide to the new position instead of jumping
+      glideMarker(c.id,markers[c.id],[Number(c.lon),Number(c.lat)]);
+      const pinEl=markers[c.id].getElement();
+      paintPin(pinEl,c);
+      // NEW: ripple ring on off-route drivers
+      pinEl.classList.toggle('alert',c.status==='off');
+      pinEl.classList.toggle('halted',!!halts[c.id]);
+      const stale=c.status==='offline';pinEl.classList.toggle('stale',stale);
+      let seenTag=pinEl.querySelector('.seen-tag');
+      if(stale&&Number.isFinite(Number(c.silentSec))){if(!seenTag){seenTag=document.createElement('span');seenTag.className='seen-tag';pinEl.appendChild(seenTag)}seenTag.textContent='no signal · '+agoText(Number(c.silentSec))}
+      else if(seenTag)seenTag.remove();
       bounds.extend([c.lon,c.lat]);
     }
     const status=c.status||'offline',gap=Number(c.gapKm);
     let detail=LABEL[status]||status;
+    if(status==='offline'&&Number.isFinite(Number(c.silentSec)))detail='No signal · last seen '+agoText(Number(c.silentSec));
     if(Number.isFinite(gap)&&gap>0)detail=gap.toFixed(1)+' km behind';
     if(c.etaMin!==null&&c.etaMin!==undefined)detail+=' · '+c.etaMin+' min';
-    const row=`<div class="row"><div class="person"><div class="avatar">${esc(String(c.name||'?')[0].toUpperCase())}</div><div><b>${esc(c.name||'Driver')}${c.id===socket.id?' (you)':''}</b><br><small>${esc(detail)}</small></div></div><span class="status ${esc(status)}">${esc(LABEL[status]||status)}</span></div>`;
+    const row=`<div class="row"><div class="person">${avatarHtml(c)}<div><b>${esc(c.name||'Driver')}${c.id===socket.id?' (you)':''}</b><br><small>${esc(detail)}</small></div></div><span class="status ${esc(status)}">${esc(LABEL[status]||status)}</span></div>`;
     $('statuscars').insertAdjacentHTML('beforeend',row);
   });
-  Object.keys(markers).forEach(id=>{if(!seen.has(id)){markers[id].remove();delete markers[id]}});
+  Object.keys(markers).forEach(id=>{if(!seen.has(id)){cancelAnimationFrame(glides.get(id));markers[id].remove();delete markers[id]}});
   if(follow&&cars.length&&!bounds.isEmpty())map.fitBounds(bounds,{padding:100,maxZoom:15,duration:500});
-  $('memberCount').textContent=$('smembers').textContent=$('umembers').textContent=cars.length;
-  $('onroute').textContent=$('sonroute').textContent=$('uonroute').textContent=on;
-  $('gap').textContent=$('sgap').textContent=$('ugap').textContent=maxGap.toFixed(1)+' km';
+  Object.keys(halts).forEach(id=>{if(id!==socket.id&&!seen.has(id))delete halts[id]});
+  checkRegroupArrival();renderHalts();checkArrivals(cars);
+  // NEW: animated count-up for the metrics
+  ['memberCount','smembers','umembers'].forEach(id=>animateNumber($(id),cars.length));
+  ['onroute','sonroute','uonroute'].forEach(id=>animateNumber($(id),on));
+  ['gap','sgap','ugap'].forEach(id=>animateNumber($(id),maxGap,1,' km'));
   if(!cars.length){$('statuscars').textContent='Waiting for convoy members…'}
 });
 
@@ -508,6 +1584,8 @@ socket.on('alert',a=>{
     const r=a.rejoin;
     showBanner(`<b>${who} missed a turn</b>${Number(a.offMeters)||0} m off route.`+
       (r?`<br>Suggested: ${esc(r.kind)} at km ${esc(r.km)}.`:''),'warn',10000);
+    if(a.id===socket.id&&navVoiceOn&&speechOK){try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch{}navMissedTurn()}
+    else{announce(`${a.id===socket.id?'You':(a.name||'A driver')} missed a turn`,[300,100,300]);if(a.id===socket.id){navLastRouteAt=0;if(navOpen)navFetchDirections()}}
     if(rejoinMarker)rejoinMarker.remove();rejoinMarker=null;
     if(r&&map&&Array.isArray(r.point)){
       const el=document.createElement('div');el.className='rejoin';el.textContent='Rejoin here';
@@ -515,9 +1593,12 @@ socket.on('alert',a=>{
     }
   }else if(a.type==='rejoined'){
     showBanner(`<b>${who} is back on route</b>Convoy whole again.`,'ok',5000);
+    announce(`${a.id===socket.id?'You are':(a.name||'A driver')+' is'} back on route`,[120]);
     if(rejoinMarker){rejoinMarker.remove();rejoinMarker=null}
   }else if(a.type==='gap'){
     showBanner(`<b>${esc(a.name)} is ${esc(a.gapKm)} km behind</b>The convoy is spreading out.`,'warn',8000);
+    announce(`${a.name||'A driver'} is ${a.gapKm} kilometres behind`,[250,100,250]);
+    suggestRegroup(a);
   }
 });
 async function shareInvite(){
@@ -549,7 +1630,208 @@ document.querySelectorAll('[data-stop-query]').forEach(button=>button.addEventLi
   if(!plannerMap)openPlanner(pendingTrip);else setTimeout(()=>plannerMap?.resize(),80);
   $('waypointSearch').value=query;$('searchWaypoint').click();
 }));
+// ===== NEW: profile pictures (shown on the map and in lists instead of the first letter) =====
+const AVATAR_RE=/^\/avatar\/[a-f0-9]{32}\.jpg$/;
+const safeAvatar=url=>typeof url==='string'&&AVATAR_RE.test(url)?url:null;
+function paintPin(el,c){
+  const color=COLORS[c.status]||COLORS.offline,url=safeAvatar(c.avatar);
+  if(url){
+    el.classList.add('photo');
+    if(el.dataset.photo!==url){el.dataset.photo=url;el.style.backgroundImage='url("'+url+'")'}
+    el.style.backgroundColor='#23262d';el.style.setProperty('--ring',color);
+  }else{
+    el.classList.remove('photo');el.dataset.photo='';el.style.backgroundImage='';
+    el.style.background=color;el.style.removeProperty('--ring');
+  }
+}
+function avatarHtml(c){
+  const url=safeAvatar(c.avatar);
+  return url?`<div class="avatar photo" style="background-image:url('${url}')"></div>`:`<div class="avatar">${esc(String(c.name||'?')[0].toUpperCase())}</div>`;
+}
+function miniAvatarHtml(c,color){
+  const url=safeAvatar(c.avatar);
+  return url?`<span class="mini-avatar photo" style="background-image:url('${url}');--ring:${color}"></span>`:`<span class="mini-avatar" style="background:${color}">${esc(String(c.name||'?').slice(0,1).toUpperCase())}</span>`;
+}
+// Crops the middle square of any photo and shrinks it to a small JPEG (also strips location data from the picture).
+async function squareJpeg(file,size=256){
+  if(!file||!/^image\//.test(file.type||''))throw new Error('Choose an image file.');
+  if(file.size>15*1024*1024)throw new Error('That photo is too large (15 MB max).');
+  let bmp;
+  try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}
+  catch{
+    bmp=await new Promise((resolve,reject)=>{
+      const img=new Image(),href=URL.createObjectURL(file);
+      img.onload=()=>{URL.revokeObjectURL(href);resolve(img)};
+      img.onerror=()=>{URL.revokeObjectURL(href);reject(new Error('Could not read that image.'))};
+      img.src=href;
+    });
+  }
+  const w=bmp.width||bmp.naturalWidth,h=bmp.height||bmp.naturalHeight,s=Math.min(w,h);
+  if(!s)throw new Error('Could not read that image.');
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#23262d';ctx.fillRect(0,0,size,size);
+  ctx.drawImage(bmp,(w-s)/2,(h-s)/2,s,s,0,0,size,size);
+  if(bmp.close)bmp.close();
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.86));
+  if(!blob)throw new Error('Could not process that image.');
+  return blob;
+}
+async function uploadAvatar(blob,token){
+  const r=await fetch('/api/avatar',{method:'PUT',headers:{Authorization:'Bearer '+(token||authToken),'Content-Type':'image/jpeg'},body:blob});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.error||'Could not save your photo.');
+  return data.user;
+}
+function renderAccountPhoto(){
+  const url=safeAvatar(authUser&&authUser.avatar);
+  $('acctAvatarImg').hidden=!url;if(url)$('acctAvatarImg').src=url;
+  $('acctAvatarLetter').hidden=!!url;$('acctAvatarLetter').textContent=String((authUser&&authUser.name)||'?')[0].toUpperCase();
+  $('acctChange').textContent=url?'Change photo':'Add photo';$('acctRemove').hidden=!url;
+}
+function photoMessage(text,ok){$('acctPhotoMsg').textContent=text||'';$('acctPhotoMsg').classList.toggle('ok',!!ok)}
+$('acctAvatar').onclick=()=>$('acctPhotoFile').click();
+$('acctChange').onclick=()=>$('acctPhotoFile').click();
+$('acctPhotoFile').onchange=async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';
+  if(!file)return;
+  photoMessage('Saving your photo…',true);
+  try{
+    authUser=await uploadAvatar(await squareJpeg(file));
+    renderAccountPhoto();photoMessage('Photo saved. It shows on the map when you join a trip.',true);
+  }catch(err){photoMessage(err instanceof TypeError?'Could not reach the server.':err.message)}
+};
+$('acctRemove').onclick=async()=>{
+  photoMessage('Removing…',true);
+  try{
+    const r=await fetch('/api/avatar',{method:'DELETE',headers:authHeaders()});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'Could not remove the photo.');
+    authUser=data.user;renderAccountPhoto();photoMessage('Photo removed.',true);
+  }catch(err){photoMessage(err.message)}
+};
+// Photo picker on the sign-up form (uploaded right after the account is created)
+let signupPhoto=null,signupPhotoUrl='';
+function setSignupPhoto(blob){
+  if(signupPhotoUrl)URL.revokeObjectURL(signupPhotoUrl);
+  signupPhoto=blob||null;signupPhotoUrl=blob?URL.createObjectURL(blob):'';
+  $('authAvatarPreview').hidden=!blob;if(blob)$('authAvatarPreview').src=signupPhotoUrl;
+  $('authAvatarIcon').style.display=blob?'none':'';
+  $('authAvatarBtn').classList.toggle('has-photo',!!blob);
+  $('authAvatarLabel').textContent=blob?'Change photo':'Add a photo (optional)';
+  $('authAvatarClear').hidden=!blob;
+}
+$('authAvatarBtn').onclick=()=>$('authAvatarFile').click();
+$('authAvatarClear').onclick=()=>setSignupPhoto(null);
+$('authAvatarFile').onchange=async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';
+  if(!file)return;
+  try{setSignupPhoto(await squareJpeg(file));$('authError').textContent=''}
+  catch(err){$('authError').textContent=err.message}
+};
+
+// ===== NEW: accounts (sign in, create account, stay signed in) =====
+function storeToken(token,remember){
+  authToken=token;
+  try{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY);(remember?localStorage:sessionStorage).setItem(AUTH_KEY,token)}catch{}
+}
+function clearToken(){authToken='';try{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY)}catch{}}
+let authMode='signin';
+function setAuthMode(mode){
+  authMode=mode;const up=mode==='signup';
+  $('authTitle').textContent=up?'Create your account':'Welcome back';
+  $('authSub').textContent=up?'Sign up to start or join a convoy':'Sign in to continue to ONEROUTE';
+  $('authNameField').hidden=!up;$('authAvatarField').hidden=!up;
+  $('authSubmitLabel').textContent=up?'Create account':'Sign in';
+  $('authSwitchText').textContent=up?'Already have an account?':'Don’t have an account?';
+  $('authSwitch').textContent=up?'Sign in':'Sign up';
+  $('authPassword').autocomplete=up?'new-password':'current-password';
+  $('authPassword').placeholder=up?'Password (8+ characters)':'Password';
+  $('authError').textContent='';
+}
+function showAuthScreen(message){
+  ['setup','app','nav','planner','navigationScreen'].forEach(id=>{const el=$(id);if(el)el.hidden=true});
+  $('auth').hidden=false;setAuthMode(authMode);
+  if(message)$('authError').textContent=message;
+  if(window.matchMedia&&matchMedia('(hover:hover)').matches)setTimeout(()=>$(authMode==='signup'?'authName':'authEmail').focus(),50);
+}
+function enterApp(user){
+  authUser=user;$('auth').hidden=true;$('setup').hidden=false;
+  $('acctName').textContent=user.name;renderAccountPhoto();photoMessage('');
+  if(!$('name').value.trim())$('name').value=user.name;
+  if(!socket.connected)socket.connect();
+}
+function setAuthBusy(on){$('authSubmit').disabled=on;$('authSubmit').classList.toggle('loading',on)}
+$('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');
+$('authEye').onclick=()=>{
+  const show=$('authPassword').type==='password';
+  $('authPassword').type=show?'text':'password';
+  $('eyeOn').hidden=show;$('eyeOff').hidden=!show;
+  $('authEye').setAttribute('aria-pressed',String(show));$('authEye').setAttribute('aria-label',show?'Hide password':'Show password');
+};
+$('authForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const up=authMode==='signup';
+  const nameValue=$('authName').value.trim(),email=$('authEmail').value.trim(),password=$('authPassword').value,remember=$('authRemember').checked;
+  if(up&&!nameValue)return $('authError').textContent='Enter your name.';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))return $('authError').textContent='Enter a valid email address.';
+  if(!password)return $('authError').textContent='Enter your password.';
+  if(up&&password.length<8)return $('authError').textContent='Use a password with at least 8 characters.';
+  $('authError').textContent='';setAuthBusy(true);
+  try{
+    const r=await fetch(up?'/api/signup':'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nameValue,email,password,remember})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'Something went wrong. Try again.');
+    storeToken(data.token,remember);$('authPassword').value='';
+    let user=data.user,photoNote='';
+    if(up&&signupPhoto){try{user=await uploadAvatar(signupPhoto,data.token)}catch(err){photoNote='Account created, but the photo was not saved: '+err.message}}
+    setSignupPhoto(null);
+    enterApp(user);
+    if(photoNote)photoMessage(photoNote);
+  }catch(err){
+    $('authError').textContent=err instanceof TypeError?'Could not reach the server. Check your connection.':err.message;
+  }finally{setAuthBusy(false)}
+});
+$('signOut').onclick=async()=>{
+  try{await fetch('/api/logout',{method:'POST',headers:authHeaders()})}catch{}
+  clearToken();socket.disconnect();location.reload();
+};
+// A login that was revoked or expired while away: go back to the sign-in screen.
+socket.on('connect_error',err=>{if(err&&err.message==='unauthorized'){clearToken();location.reload()}});
+// 3D tilt on the card (mouse devices only, off for reduced motion)
+{
+  const stage=$('authStage'),tilt=$('authTilt');
+  if(!orbReduced()&&window.matchMedia&&matchMedia('(hover:hover)').matches){
+    stage.addEventListener('mousemove',e=>{
+      const r=stage.getBoundingClientRect(),clamp=v=>Math.max(-1,Math.min(1,v));
+      tilt.style.setProperty('--ry',clamp((e.clientX-r.left-r.width/2)/300)*10+'deg');
+      tilt.style.setProperty('--rx',-clamp((e.clientY-r.top-r.height/2)/300)*10+'deg');
+    });
+    stage.addEventListener('mouseleave',()=>{tilt.style.setProperty('--rx','0deg');tilt.style.setProperty('--ry','0deg')});
+  }
+}
+// Automatic sign-in: if this device has a saved login, skip the form.
+(async function bootAccounts(){
+  if(!authToken)return showAuthScreen();
+  const job=busyStart('Signing you in…','connecting','',()=>showAuthScreen('The server is not responding. Check your connection.'));
+  try{
+    const r=await fetch('/api/me',{headers:authHeaders(),cache:'no-store',signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});
+    if(r.ok){const d=await r.json();job.stop();return enterApp(d.user)}
+    clearToken();job.stop();showAuthScreen('Your session ended. Please sign in again.');
+  }catch{job.stop();showAuthScreen('Could not reach the server. Check your connection.')}
 })();
+})();
+
+window.addEventListener('beforeunload',()=>{try{clearTimeout(voiceTimer);clearInterval(voiceClockInterval);if(voiceRecorder&&voiceRecorder.state!=='inactive')voiceRecorder.stop();if(voiceStream)voiceStream.getTracks().forEach(track=>track.stop())}catch{}});
 </script>
 </body>
+<!-- Add this compact footer near the end of the current page, before </body>. Links open separate tabs. -->
+<footer class="legal-footer" aria-label="Legal information">
+  <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+  <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a> ·
+  <a href="/cookies.html" target="_blank" rel="noopener noreferrer">Cookie policy</a> ·
+  <a href="/refund.html" target="_blank" rel="noopener noreferrer">Refund policy</a>
+</footer>
+<style>.legal-footer{padding:12px 16px;text-align:center;font-size:12px;color:#c0c5ce;background:#17191d;border-top:1px solid #414752}.legal-footer a{color:#f4c430;text-underline-offset:3px}.legal-footer a:focus-visible{outline:3px solid #f4c430;outline-offset:3px}</style>
+
 </html>
