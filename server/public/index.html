@@ -1039,14 +1039,16 @@ syncAlertsButton();
 // ===== NEW: spoken navigation =====
 const speechOK='speechSynthesis' in window&&typeof SpeechSynthesisUtterance!=='undefined';
 let navVoiceOn=true,speechUnlocked=false,navSpoken={key:'',done:new Set()};
+let cloudVoice=false;const navPlayer=new Audio();navPlayer.preload='auto';
 try{navVoiceOn=localStorage.getItem('oneroute-navvoice')!=='off'}catch{}
 function syncNavVoiceButtons(){
   [['navVoiceToggle',navVoiceOn?'🧭 Voice guidance: ON':'🔇 Voice guidance: OFF'],['navVoiceToggle2',navVoiceOn?'🔊 Voice':'🔇 Voice']].forEach(([id,label])=>{
     const b=$(id);if(!b)return;b.textContent=label;b.classList.toggle('active',navVoiceOn);b.setAttribute('aria-pressed',String(navVoiceOn));
   });
 }
-function speakNav(text,interrupt=true){
-  if(!navVoiceOn||!speechOK||!text)return;
+// Browser voice (always available, used as the fallback)
+function speakBrowser(text,interrupt=true){
+  if(!speechOK||!text)return;
   try{
     if(interrupt)speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=0.95;
@@ -1054,10 +1056,59 @@ function speakNav(text,interrupt=true){
     speechSynthesis.speak(u);
   }catch{}
 }
+// ElevenLabs voice: the server makes the audio (the key never reaches this page); every phrase is kept so repeats are instant
+const ttsCache=new Map(),ttsPending=new Map();
+function ttsFetch(text){
+  if(ttsCache.has(text))return Promise.resolve(ttsCache.get(text));
+  if(ttsPending.has(text))return ttsPending.get(text);
+  const job=fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({text})})
+    .then(async r=>{
+      if(!r.ok)throw new Error('voice '+r.status);
+      const url=URL.createObjectURL(await r.blob());
+      ttsCache.set(text,url);
+      if(ttsCache.size>80){const oldest=ttsCache.keys().next().value;URL.revokeObjectURL(ttsCache.get(oldest));ttsCache.delete(oldest)}
+      return url;
+    })
+    .finally(()=>ttsPending.delete(text));
+  ttsPending.set(text,job);
+  return job;
+}
+let navSpeakToken=0;
+function speakCloud(text,interrupt){
+  const token=++navSpeakToken;let done=false;
+  if(interrupt){try{navPlayer.pause()}catch{}try{if(speechOK)speechSynthesis.cancel()}catch{}}
+  // If the voice server is slow or fails, use the browser voice so the driver is never left in silence
+  const fallback=()=>{if(done||token!==navSpeakToken)return;done=true;speakBrowser(text,false)};
+  const timer=setTimeout(fallback,2500);
+  ttsFetch(text).then(url=>{
+    clearTimeout(timer);if(done||token!==navSpeakToken)return;done=true;
+    navPlayer.src=url;navPlayer.onended=navPlayer.onerror=()=>duckVoice(false);
+    duckVoice(true);
+    const p=navPlayer.play();if(p&&p.catch)p.catch(()=>{duckVoice(false);speakBrowser(text,false)});
+  }).catch(()=>{clearTimeout(timer);fallback()});
+}
+function speakNav(text,interrupt=true){
+  if(!navVoiceOn||!text)return;
+  if(cloudVoice)speakCloud(text,interrupt);else speakBrowser(text,interrupt);
+}
+// Get the next turn's phrases ready ahead of time so the voice starts without a delay
+function prefetchNavPrompts(step){
+  if(!cloudVoice||!step)return;
+  const m=step.maneuver||{},type=m.type||'continue';
+  if(type==='depart'||((type==='continue'||type==='new name')&&(!m.modifier||m.modifier==='straight')))return;
+  const act=navSpokenManeuver(step),cap=act.charAt(0).toUpperCase()+act.slice(1);
+  (type==='arrive'?['Your destination is in 500 metres.','Your destination is in 200 metres.','You have arrived.']:['In 500 metres, '+act+'.','In 200 metres, '+act+'.',cap+' now.']).forEach(x=>ttsFetch(x).catch(()=>{}));
+}
+function loadVoiceInfo(){
+  fetch('/api/voice-info',{headers:authHeaders(),cache:'no-store'}).then(r=>r.ok?r.json():{}).then(d=>{
+    cloudVoice=!!d.cloudVoice;
+    if(cloudVoice)['You have missed your turn. Finding a route to rejoin.','Spoken directions on.'].forEach(x=>ttsFetch(x).catch(()=>{}));
+  }).catch(()=>{});
+}
 function setNavVoice(on){
   navVoiceOn=on;try{localStorage.setItem('oneroute-navvoice',on?'on':'off')}catch{}
   syncNavVoiceButtons();
-  if(on)speakNav('Spoken directions on.');else if(speechOK){try{speechSynthesis.cancel()}catch{}}
+  if(on)speakNav('Spoken directions on.');else{try{navPlayer.pause()}catch{}if(speechOK){try{speechSynthesis.cancel()}catch{}}}
 }
 ['navVoiceToggle','navVoiceToggle2'].forEach(id=>{const b=$(id);if(b)b.onclick=()=>setNavVoice(!navVoiceOn)});
 syncNavVoiceButtons();
@@ -1085,7 +1136,7 @@ function navVoiceStage(step,meters){
   const m=step.maneuver||{},type=m.type||'continue';
   if(type==='depart')return;
   const key=[(m.location||[])[0],(m.location||[])[1],type,m.modifier].join('|');
-  if(navSpoken.key!==key)navSpoken={key,done:new Set()};
+  if(navSpoken.key!==key){navSpoken={key,done:new Set()};prefetchNavPrompts(step)}
   const trivial=(type==='continue'||type==='new name')&&(!m.modifier||m.modifier==='straight');
   const stage=meters<=90?'now':meters<=230?'m200':meters<=550?'m500':meters>=900?'far':null;
   if(!stage||navSpoken.done.has(stage))return;
@@ -1391,6 +1442,7 @@ const HOLD_MS=350;
 
 // ===== NEW: auto-play incoming voice messages (one shared player so one tap unlocks it) =====
 const voicePlayer=new Audio();voicePlayer.preload='auto';
+let navUnlocked=false;
 let voiceQueue=[],voiceCurrent=null,voicePlaying=false,voiceWatchdog=null,lastSentAudio='',voiceUnlocked=false,voiceToastTimer=null;
 const SAFE_AUDIO=/^audio\/[a-z0-9.+-]+(;\s*codecs=[a-z0-9.,"' -]+)?$/i;
 const SILENT_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
@@ -1403,6 +1455,10 @@ function unlockMedia(){
       const p=voicePlayer.play();
       if(p&&p.then)p.then(restore).catch(()=>{voicePlayer.muted=false;voiceUnlocked=false});else restore();
     }catch{voicePlayer.muted=false}
+  }
+  if(!navUnlocked){
+    navUnlocked=true;
+    try{navPlayer.muted=true;navPlayer.src=SILENT_WAV;const q=navPlayer.play();const done=()=>{if(navPlayer.src===SILENT_WAV)navPlayer.pause();navPlayer.muted=false};if(q&&q.then)q.then(done).catch(()=>{navPlayer.muted=false;navUnlocked=false});else done()}catch{navPlayer.muted=false}
   }
   if(!speechUnlocked&&speechOK){speechUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{}}
 }
@@ -1810,7 +1866,7 @@ socket.on('alert',a=>{
     const r=a.rejoin;
     showBanner(`<b>${who} missed a turn</b>${Number(a.offMeters)||0} m off route.`+
       (r?`<br>Suggested: ${esc(r.kind)} at km ${esc(r.km)}.`:''),'warn',10000);
-    if(a.id===socket.id&&navVoiceOn&&speechOK){try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch{}navMissedTurn()}
+    if(a.id===socket.id&&navVoiceOn&&(speechOK||cloudVoice)){try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch{}navMissedTurn()}
     else{announce(`${a.id===socket.id?'You':(a.name||'A driver')} missed a turn`,[300,100,300]);if(a.id===socket.id){navLastRouteAt=0;if(navOpen)navFetchDirections()}}
     if(rejoinMarker)rejoinMarker.remove();rejoinMarker=null;
     if(r&&map&&Array.isArray(r.point)){
@@ -2202,6 +2258,7 @@ function enterApp(user){
   $('acctName').textContent=user.name;renderAccountPhoto();photoMessage('');syncDeleteUi(user);
   if(!$('name').value.trim())$('name').value=user.name;
   if(!socket.connected)socket.connect();
+  loadVoiceInfo();
 }
 function setAuthBusy(on){$('authSubmit').disabled=on;$('authSubmit').classList.toggle('loading',on)}
 $('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');

@@ -142,3 +142,114 @@ export function thin(coordinates, max = 350) {
   out.push(coordinates[coordinates.length - 1]);
   return out;
 }
+
+// -------------------- Navigation voice (ElevenLabs) --------------------
+// The API key stays on the server. Phones ask /api/tts, and we cache every phrase so repeats cost nothing.
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(HERE, 'data');
+// Reads config.json forgivingly: handles Windows encodings, curly quotes and trailing commas, and remembers what went wrong.
+let configProblem = '';
+function readConfigFile() {
+  const file = path.join(HERE, 'config.json');
+  let raw;
+  try {
+    raw = fs.readFileSync(file);
+  } catch {
+    configProblem = `config.json was not found. It must be in ${HERE}`;
+    return {};
+  }
+  let text = raw[0] === 0xff && raw[1] === 0xfe ? raw.toString('utf16le') : raw.toString('utf8'); // PowerShell often saves UTF-16
+  text = text.replace(/^\uFEFF/, '').replace(/[\u201c\u201d]/g, '"').replace(/,(\s*[}\]])/g, '$1');
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    configProblem = `config.json could not be read (${error.message}). Check every line has "quotes" and commas between lines.`;
+    return {};
+  }
+}
+const CFG = readConfigFile();
+const cleanKey = (value) => String(value || '').trim().replace(/^["'\s]+|["'\s]+$/g, '');
+const EL_KEY = cleanKey(process.env.ELEVENLABS_API_KEY || CFG.elevenLabsApiKey);
+const EL_VOICE = cleanKey(process.env.ELEVENLABS_VOICE_ID || CFG.elevenLabsVoiceId) || '7vmb1wpSAT1c83jjLIeZ';
+const EL_MODEL = String(process.env.ELEVENLABS_MODEL || CFG.elevenLabsModel || 'eleven_flash_v2_5').trim();
+const DAILY_CHARS = Number(process.env.TTS_DAILY_CHARS || CFG.ttsDailyChars || 30000); // spend guard for uncached text
+const TTS_DIR = path.join(DATA_DIR, 'tts');
+
+export const ttsEnabled = () => !!EL_KEY;
+export const ttsStatus = () => {
+  if (EL_KEY) return `Navigation voice: ElevenLabs is ON (voice ${EL_VOICE}, model ${EL_MODEL}, key ${EL_KEY.slice(0, 5)}...${EL_KEY.slice(-3)})`;
+  const why = configProblem || 'config.json has no elevenLabsApiKey filled in';
+  return `Navigation voice: browser voice. ElevenLabs is OFF because ${why}.`;
+};
+
+const memCache = new Map(); // key -> Buffer
+let spend = { day: '', chars: 0 };
+const loggedErrors = new Set();
+
+export function cleanSpeechText(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length > 160) return null;
+  if (/[\u0000-\u001f<>{}\\]/.test(text)) return null;
+  return text;
+}
+
+// Returns an MP3 Buffer. Throws Error with .status on trouble.
+export async function speakText(rawText) {
+  if (!EL_KEY) throw Object.assign(new Error('voice not configured'), { status: 404 });
+  const text = cleanSpeechText(rawText);
+  if (!text) throw Object.assign(new Error('bad text'), { status: 400 });
+
+  const key = crypto.createHash('sha256').update(`${EL_VOICE}|${EL_MODEL}|${text}`).digest('hex');
+  if (memCache.has(key)) return memCache.get(key);
+  const file = path.join(TTS_DIR, `${key}.mp3`);
+  try {
+    const onDisk = fs.readFileSync(file);
+    memCache.set(key, onDisk);
+    return onDisk;
+  } catch {
+    /* not cached yet */
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (spend.day !== today) spend = { day: today, chars: 0 };
+  if (spend.chars + text.length > DAILY_CHARS) throw Object.assign(new Error('daily voice limit reached'), { status: 429 });
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(EL_VOICE)}?output_format=mp3_44100_64`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'xi-api-key': EL_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: EL_MODEL, voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok) {
+    let detail = '';
+    try {
+      detail = (await response.text()).slice(0, 200);
+    } catch {
+      /* ignore */
+    }
+    const tag = `${response.status}`;
+    if (!loggedErrors.has(tag)) {
+      loggedErrors.add(tag);
+      console.error(`ElevenLabs refused the request (${response.status}). ${detail}`);
+    }
+    throw Object.assign(new Error(`elevenlabs ${response.status}`), { status: 502 });
+  }
+  const audio = Buffer.from(await response.arrayBuffer());
+  if (audio.length < 200) throw Object.assign(new Error('empty audio'), { status: 502 });
+  spend.chars += text.length;
+  memCache.set(key, audio);
+  if (memCache.size > 400) memCache.delete(memCache.keys().next().value);
+  try {
+    fs.mkdirSync(TTS_DIR, { recursive: true });
+    fs.writeFileSync(file, audio);
+  } catch {
+    /* cache on disk is optional */
+  }
+  return audio;
+}

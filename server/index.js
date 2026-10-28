@@ -9,7 +9,7 @@ import path from 'path';
 import { makeRoute, snap } from './geo.js';
 import { fetchRoute, geocode } from './routing.js';
 import { bestRejoin } from './rejoin.js';
-import { nearestHelp, getWeather, fetchAlternatives, thin } from './features.js';
+import { nearestHelp, getWeather, fetchAlternatives, thin, ttsEnabled, ttsStatus, speakText } from './features.js';
 import { registerAuthRoutes, requireAuth, authUserFromToken, avatarForUser, authStatus } from './auth.js';
 
 // -------------------- Settings --------------------
@@ -203,6 +203,26 @@ app.get('/api/live/:token', liveLimiter, (req, res) => {
     })),
     sos,
   });
+});
+
+// Navigation voice: the page asks for an audio clip of a short instruction. The ElevenLabs key never leaves the server.
+const ttsHits = new Map();
+app.get('/api/voice-info', requireAuth, (_req, res) => res.json({ cloudVoice: ttsEnabled() }));
+app.post('/api/tts', requireAuth, async (req, res) => {
+  const now = Date.now();
+  const hit = ttsHits.get(req.user.id) || { n: 0, reset: now + 60000 };
+  if (now > hit.reset) { hit.n = 0; hit.reset = now + 60000; }
+  hit.n += 1;
+  ttsHits.set(req.user.id, hit);
+  if (ttsHits.size > 2000) ttsHits.clear();
+  if (hit.n > 40) return res.status(429).json({ error: 'Too many voice requests.' });
+  try {
+    const audio = await speakText(req.body?.text);
+    res.set({ 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=86400' });
+    res.send(audio);
+  } catch (error) {
+    res.status(error.status || 502).json({ error: 'Voice not available.' });
+  }
 });
 
 const server = http.createServer(app);
@@ -1120,6 +1140,7 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Oneroute server running on port ${PORT}`);
   console.log(authStatus());
+  console.log(ttsStatus());
   if (!fs.existsSync(path.resolve('node_modules/maplibre-gl/dist/maplibre-gl.js')) && !fs.existsSync(path.resolve('public/vendor/maplibre-gl.js'))) {
     console.warn('WARNING: the map library is not installed. Stop the server and run:  npm install maplibre-gl@4.7.1');
   }
