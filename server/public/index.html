@@ -551,7 +551,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       </button>
       <div class="acct-text">
         <span>Signed in as <b id="acctName"></b></span>
-        <div class="acct-links"><button type="button" id="acctChange">Add photo</button><button type="button" id="acctRemove" hidden>Remove photo</button><button type="button" id="acctDelete" class="danger-link">Delete account</button></div>
+        <div class="acct-links"><button type="button" id="acctVoiceTest" class="secondary" style="padding:2px 9px;font-size:12px;margin-right:6px">🔊 Test Voice</button><button type="button" id="acctChange">Add photo</button><button type="button" id="acctRemove" hidden>Remove photo</button><button type="button" id="acctDelete" class="danger-link">Delete account</button></div>
         <small id="acctPhotoMsg" role="status"></small>
       </div>
     </div>
@@ -651,6 +651,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
           <button id="sosButton">🆘 SOS</button>
           <button id="alertsToggle">🔊 Alerts: ON</button>
           <button id="navVoiceToggle" aria-pressed="true">🧭 Voice guidance: ON</button>
+          <button id="navVoiceTest" class="secondary" type="button" title="Test voice guidance">🔊 Test Voice</button>
         </div>
         <div id="quickStopMenu" class="quick-stop-menu" hidden>
           <h3>Add a stop to your convoy route</h3>
@@ -776,7 +777,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 </div>
 
 <section id="navigationScreen" role="dialog" aria-modal="true" aria-label="Full-screen navigation" hidden>
-  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="navVoiceToggle2" class="secondary" aria-pressed="true" title="Spoken directions">🔊 Voice</button><button id="navSos" class="secondary" aria-label="Send SOS">🆘</button><button id="navHalt" class="secondary">⏸ Stop</button><button id="closeNavigation" class="secondary" aria-label="Exit navigation">✕ Exit</button></header>
+  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="navVoiceToggle2" class="secondary" aria-pressed="true" title="Spoken directions">🔊 Voice</button><button id="navVoiceTest2" class="secondary" type="button" title="Test voice guidance">🔊 Test</button><button id="navSos" class="secondary" aria-label="Send SOS">🆘</button><button id="navHalt" class="secondary">⏸ Stop</button><button id="closeNavigation" class="secondary" aria-label="Exit navigation">✕ Exit</button></header>
   <div class="nav-turn" aria-live="polite"><div class="turn-icon" id="navTurnIcon">↑</div><div class="turn-copy"><small id="navTurnLabel">NEXT MANEUVER</small><strong id="navInstruction">Finding your route…</strong><span id="navRoadName">Keep the convoy together</span></div><div class="turn-distance" id="navTurnDistance">—<small>TO TURN</small></div></div>
   <div class="nav-map-area"><div id="navMap"></div><div class="nav-map-badge">● <b id="navLiveCount">0 vehicles</b> · live convoy positions</div></div>
   <div class="nav-bottom"><div class="nav-bottom-head"><strong>Convoy locations</strong><span>Tap a driver to focus map</span></div><div id="navConvoy" class="nav-convoy"></div><div class="nav-bottom-head" style="margin-top:4px"><strong>Upcoming directions</strong><span id="navStepsCount">Turn-by-turn</span></div><div id="navNextSteps" class="nav-next-list"></div><div class="nav-note" id="navNotice">Directions use the Open Source Routing Machine public demo service. Keep your eyes on the road and follow road signs.</div></div>
@@ -1036,62 +1037,107 @@ function announce(text,pattern){
 $('alertsToggle').onclick=()=>{alertsOn=!alertsOn;try{localStorage.setItem('oneroute-alerts',alertsOn?'on':'off')}catch{}syncAlertsButton();if(alertsOn)announce('Spoken alerts on',[80])};
 syncAlertsButton();
 
-// ===== NEW: spoken navigation =====
+// ===== NEW: spoken navigation (ElevenLabs + browser fallback) =====
 const speechOK='speechSynthesis' in window&&typeof SpeechSynthesisUtterance!=='undefined';
 let navVoiceOn=true,speechUnlocked=false,navSpoken={key:'',done:new Set()};
-let cloudVoice=false;const navPlayer=new Audio();navPlayer.preload='auto';
+let cloudVoice=false;
+const navPlayer=new Audio();
+navPlayer.preload='auto';
 try{navVoiceOn=localStorage.getItem('oneroute-navvoice')!=='off'}catch{}
+
 function syncNavVoiceButtons(){
-  [['navVoiceToggle',navVoiceOn?'🧭 Voice guidance: ON':'🔇 Voice guidance: OFF'],['navVoiceToggle2',navVoiceOn?'🔊 Voice':'🔇 Voice']].forEach(([id,label])=>{
+  [['navVoiceToggle',navVoiceOn?'🧭 Voice guidance: ON':'🔇 Voice guidance: OFF'],['navVoiceToggle2',navVoiceOn?'🔊 Voice: ON':'🔇 Voice: OFF']].forEach(([id,label])=>{
     const b=$(id);if(!b)return;b.textContent=label;b.classList.toggle('active',navVoiceOn);b.setAttribute('aria-pressed',String(navVoiceOn));
   });
 }
-// Browser voice (always available, used as the fallback)
+
+// Browser voice (always available, used as reliable fallback)
 function speakBrowser(text,interrupt=true){
   if(!speechOK||!text)return;
   try{
     if(interrupt)speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=0.95;
-    u.onstart=()=>duckVoice(true);u.onend=u.onerror=()=>duckVoice(false);
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang=navigator.language||'en-US';
+    u.rate=0.95;
+    u.onstart=()=>duckVoice(true);
+    u.onend=u.onerror=()=>duckVoice(false);
     speechSynthesis.speak(u);
   }catch{}
 }
-// ElevenLabs voice: the server makes the audio (the key never reaches this page); every phrase is kept so repeats are instant
+
+// ElevenLabs voice: the server generates and caches audio; repeated phrases cost 0ms
 const ttsCache=new Map(),ttsPending=new Map();
 function ttsFetch(text){
   if(ttsCache.has(text))return Promise.resolve(ttsCache.get(text));
   if(ttsPending.has(text))return ttsPending.get(text);
-  const job=fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({text})})
+  const job=fetch('/api/tts',{
+    method:'POST',
+    headers:{'Content-Type':'application/json',...authHeaders()},
+    body:JSON.stringify({text})
+  })
     .then(async r=>{
       if(!r.ok)throw new Error('voice '+r.status);
       const url=URL.createObjectURL(await r.blob());
       ttsCache.set(text,url);
-      if(ttsCache.size>80){const oldest=ttsCache.keys().next().value;URL.revokeObjectURL(ttsCache.get(oldest));ttsCache.delete(oldest)}
+      if(ttsCache.size>80){
+        const oldest=ttsCache.keys().next().value;
+        URL.revokeObjectURL(ttsCache.get(oldest));
+        ttsCache.delete(oldest);
+      }
       return url;
     })
     .finally(()=>ttsPending.delete(text));
   ttsPending.set(text,job);
   return job;
 }
+
 let navSpeakToken=0;
 function speakCloud(text,interrupt){
-  const token=++navSpeakToken;let done=false;
-  if(interrupt){try{navPlayer.pause()}catch{}try{if(speechOK)speechSynthesis.cancel()}catch{}}
-  // If the voice server is slow or fails, use the browser voice so the driver is never left in silence
-  const fallback=()=>{if(done||token!==navSpeakToken)return;done=true;speakBrowser(text,false)};
-  const timer=setTimeout(fallback,2500);
+  const token=++navSpeakToken;
+  let done=false;
+  if(interrupt){
+    try{navPlayer.pause()}catch{}
+    try{if(speechOK)speechSynthesis.cancel()}catch{}
+  }
+  const fallback=()=>{
+    if(done||token!==navSpeakToken)return;
+    done=true;
+    console.warn('ElevenLabs speech timed out, using browser fallback');
+    speakBrowser(text,false);
+  };
+  const timer=setTimeout(fallback,6000);
   ttsFetch(text).then(url=>{
-    clearTimeout(timer);if(done||token!==navSpeakToken)return;done=true;
-    navPlayer.src=url;navPlayer.onended=navPlayer.onerror=()=>duckVoice(false);
+    clearTimeout(timer);
+    if(done||token!==navSpeakToken)return;
+    done=true;
+    navPlayer.pause();
+    navPlayer.muted=false;
+    navPlayer.volume=1.0;
+    navPlayer.src=url;
+    navPlayer.onended=navPlayer.onerror=()=>duckVoice(false);
     duckVoice(true);
-    const p=navPlayer.play();if(p&&p.catch)p.catch(()=>{duckVoice(false);speakBrowser(text,false)});
-  }).catch(()=>{clearTimeout(timer);fallback()});
+    const p=navPlayer.play();
+    if(p&&p.catch){
+      p.catch(err=>{
+        console.warn('Audio play error, using browser fallback:', err);
+        duckVoice(false);
+        speakBrowser(text,false);
+      });
+    }
+  }).catch(err=>{
+    console.warn('TTS fetch failed:', err);
+    clearTimeout(timer);
+    fallback();
+  });
 }
+
 function speakNav(text,interrupt=true){
   if(!navVoiceOn||!text)return;
-  if(cloudVoice)speakCloud(text,interrupt);else speakBrowser(text,interrupt);
+  if(cloudVoice)speakCloud(text,interrupt);
+  else speakBrowser(text,interrupt);
 }
-// Get the next turn's phrases ready ahead of time so the voice starts without a delay
+
+// Prefetch upcoming navigation prompts so audio playback is instant
 function prefetchNavPrompts(step){
   if(!cloudVoice||!step)return;
   const m=step.maneuver||{},type=m.type||'continue';
@@ -1099,19 +1145,45 @@ function prefetchNavPrompts(step){
   const act=navSpokenManeuver(step),cap=act.charAt(0).toUpperCase()+act.slice(1);
   (type==='arrive'?['Your destination is in 500 metres.','Your destination is in 200 metres.','You have arrived.']:['In 500 metres, '+act+'.','In 200 metres, '+act+'.',cap+' now.']).forEach(x=>ttsFetch(x).catch(()=>{}));
 }
+
 function loadVoiceInfo(){
-  fetch('/api/voice-info',{headers:authHeaders(),cache:'no-store'}).then(r=>r.ok?r.json():{}).then(d=>{
+  fetch('/api/voice-info',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(d=>{
     cloudVoice=!!d.cloudVoice;
-    if(cloudVoice)['You have missed your turn. Finding a route to rejoin.','Spoken directions on.'].forEach(x=>ttsFetch(x).catch(()=>{}));
+    console.log('OneRoute cloud voice status:', cloudVoice ? 'Active (ElevenLabs)' : 'Browser fallback');
+    if(cloudVoice){
+      ['OneRoute voice guidance is active.','Spoken directions turned on.','You have missed your turn. Finding a route to rejoin.','Navigation started.'].forEach(x=>ttsFetch(x).catch(()=>{}));
+    }
   }).catch(()=>{});
 }
+
 function setNavVoice(on){
-  navVoiceOn=on;try{localStorage.setItem('oneroute-navvoice',on?'on':'off')}catch{}
+  navVoiceOn=on;
+  try{localStorage.setItem('oneroute-navvoice',on?'on':'off')}catch{}
   syncNavVoiceButtons();
-  if(on)speakNav('Spoken directions on.');else{try{navPlayer.pause()}catch{}if(speechOK){try{speechSynthesis.cancel()}catch{}}}
+  if(on){
+    showBanner('Voice guidance ON', 'ok', 3000);
+    speakNav('Spoken directions turned on.');
+  } else {
+    try{navPlayer.pause()}catch{}
+    if(speechOK){try{speechSynthesis.cancel()}catch{}}
+    showBanner('Voice guidance muted', 'info', 3000);
+  }
 }
+
+function testNavVoice(){
+  if(!navVoiceOn){
+    navVoiceOn=true;
+    try{localStorage.setItem('oneroute-navvoice','on')}catch{}
+    syncNavVoiceButtons();
+  }
+  showBanner('<b>Testing voice guidance</b>Playing sample audio...', 'ok', 4000);
+  speakNav('OneRoute voice guidance is active.');
+}
+
 ['navVoiceToggle','navVoiceToggle2'].forEach(id=>{const b=$(id);if(b)b.onclick=()=>setNavVoice(!navVoiceOn)});
+['navVoiceTest','navVoiceTest2','acctVoiceTest'].forEach(id=>{const b=$(id);if(b)b.onclick=testNavVoice});
 syncNavVoiceButtons();
+loadVoiceInfo();
 const ORD=['','first','second','third','fourth','fifth','sixth','seventh','eighth'];
 function navSpokenManeuver(step){
   const m=step?.maneuver||{},type=m.type||'continue',mod=m.modifier||'';
@@ -1458,7 +1530,14 @@ function unlockMedia(){
   }
   if(!navUnlocked){
     navUnlocked=true;
-    try{navPlayer.muted=true;navPlayer.src=SILENT_WAV;const q=navPlayer.play();const done=()=>{if(navPlayer.src===SILENT_WAV)navPlayer.pause();navPlayer.muted=false};if(q&&q.then)q.then(done).catch(()=>{navPlayer.muted=false;navUnlocked=false});else done()}catch{navPlayer.muted=false}
+    try{
+      navPlayer.muted=false;
+      navPlayer.volume=1.0;
+      navPlayer.src=SILENT_WAV;
+      const q=navPlayer.play();
+      const done=()=>{if(navPlayer.src===SILENT_WAV)navPlayer.pause()};
+      if(q&&q.then)q.then(done).catch(()=>{navUnlocked=false});else done();
+    }catch{}
   }
   if(!speechUnlocked&&speechOK){speechUnlocked=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{}}
 }
@@ -1712,7 +1791,7 @@ const step=navRouteSteps[Math.min(navStepIndex,navRouteSteps.length-1)],maneuver
 const upcoming=navRouteSteps.slice(navStepIndex+1,navStepIndex+5);$('navStepsCount').textContent=`${upcoming.length} after this`; $('navNextSteps').innerHTML=upcoming.map((st,i)=>`<div class="nav-step-chip"><b>${navManeuverIcon(st.maneuver?.type,st.maneuver?.modifier)}</b>${navManeuverText(st)}${st.name?' · '+esc(st.name):''}<br><span style="color:#9ca3af">${navFormatDistance(st.distance)}</span></div>`).join('')||'<div class="nav-step-chip">Final maneuver</div>';}
 function navStepsCountExists(){return !!$('navStepsCount');}
 function navRenderCars(){if(!navOpen)return;$('navLiveCount').textContent=`${navCars.length} vehicle${navCars.length===1?'':'s'}`;$('navConvoy').innerHTML=navCars.map(c=>{const status=c.status||'offline',color=COLORS[status]||COLORS.offline,isMe=c.id===socket.id;return `<button class="nav-person ${isMe?'me':''}" data-nav-car="${esc(c.id)}">${miniAvatarHtml(c,color)}<span><b>${esc(c.name||'Driver')}${isMe?' (you)':''}</b><small>${esc(LABEL[status]||status)}${Number.isFinite(Number(c.gapKm))&&Number(c.gapKm)>0?' · '+Number(c.gapKm).toFixed(1)+' km back':''}</small></span></button>`}).join('')||'<div class="nav-step-chip">Waiting for convoy positions…</div>';document.querySelectorAll('[data-nav-car]').forEach(b=>b.onclick=()=>{const c=navCars.find(x=>String(x.id)===b.dataset.navCar);if(c&&Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))&&navMap)navMap.flyTo({center:[Number(c.lon),Number(c.lat)],zoom:16,duration:700});});if(!navMap||!navMap.isStyleLoaded())return;const seen=new Set();navCars.forEach(c=>{if(!Number.isFinite(Number(c.lon))||!Number.isFinite(Number(c.lat)))return;seen.add(String(c.id));if(!navMarkers[c.id]){const el=document.createElement('div');el.className='nav-pin'+(c.id===socket.id?' me':'');navMarkers[c.id]=new maplibregl.Marker({element:el}).setLngLat([Number(c.lon),Number(c.lat)]).addTo(navMap);}const el=navMarkers[c.id].getElement();el.textContent=String(c.name||'?').slice(0,1).toUpperCase();paintPin(el,c);glideMarker('nav-'+c.id,navMarkers[c.id],[Number(c.lon),Number(c.lat)]);});Object.keys(navMarkers).forEach(id=>{if(!seen.has(String(id))){navMarkers[id].remove();delete navMarkers[id]}});}
-async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();setTimeout(()=>navMap?.resize(),100);$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||Date.now()-navLastRouteAt>120000)await navFetchDirections();else navUpdateInstruction();if(lastGps&&navMap)navMap.flyTo({center:[lastGps.lon,lastGps.lat],zoom:15,duration:500});}
+async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();setTimeout(()=>navMap?.resize(),100);$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();speakNav('Navigation started. Follow the highlighted route to '+(pendingTrip.destination?.label||'your destination')+'.');if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||Date.now()-navLastRouteAt>120000)await navFetchDirections();else navUpdateInstruction();if(lastGps&&navMap)navMap.flyTo({center:[lastGps.lon,lastGps.lat],zoom:15,duration:500});}
 function closeNavigation(){try{$('openNavigation').focus()}catch{}navOpen=false;$('navigationScreen').hidden=true;document.body.style.overflow='';if(navMap&&map){setTimeout(()=>navMap.resize(),80)}}
 $('openNavigation').onclick=openNavigation;
 $('openNavigation').addEventListener('click',()=>{setTimeout(()=>{if(navOpen)$('closeNavigation').focus()},150);[300,1200,2500].forEach(ms=>setTimeout(()=>applySat(navMap),ms))});$('closeNavigation').onclick=closeNavigation;
