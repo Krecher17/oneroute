@@ -780,7 +780,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
       <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
       <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
-      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportExport">Download as image or pdf</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
       <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
@@ -1369,7 +1369,7 @@ function withFreshSummary(done){
   setTimeout(finish,3000);
   socket.emit('get-summary',res=>{if(res&&res.ok)renderSummary(res.summary);finish()});
 }
-$('reportPng').onclick=()=>withFreshSummary(()=>{
+function downloadReportImage(){
   const c=buildReportCanvas();
   if(!c){showBanner('<b>No report yet</b>Join a trip and wait for the first update.','warn',4000);return}
   c.toBlob(blob=>{
@@ -1377,11 +1377,21 @@ $('reportPng').onclick=()=>withFreshSummary(()=>{
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='oneroute-trip-report.png';
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   });
-});
-$('reportPdf').onclick=()=>withFreshSummary(()=>{
+}
+function downloadReportPdf(){
   const old=document.title;document.title='ONEROUTE trip report';
   window.print();setTimeout(()=>{document.title=old},1500);
+}
+if($('reportExport'))$('reportExport').onclick=()=>withFreshSummary(()=>{
+  const choice=confirm('Click OK to download as Image (PNG), or Cancel to save as PDF.');
+  if(choice){
+    downloadReportImage();
+  } else {
+    downloadReportPdf();
+  }
 });
+if($('reportPng'))$('reportPng').onclick=()=>withFreshSummary(downloadReportImage);
+if($('reportPdf'))$('reportPdf').onclick=()=>withFreshSummary(downloadReportPdf);
 
 // Voice messages: short audio recordings are relayed by the server to this trip.
 let voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceRecording=false,voiceTimer=null,voiceClockInterval=null,voiceStartedAt=0;
