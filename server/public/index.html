@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17191d">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
 <title>ONEROUTE | Convoy Control</title>
 <link rel="stylesheet" href="/vendor/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'">
 <style>
@@ -371,6 +372,12 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
 .nav-sheet-handle .chev{transition:transform .2s;font-size:12px;color:var(--muted)}
 .nav-bottom.open .nav-sheet-handle .chev{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.nav-sheet-handle .chev{transition:none}}
+/* ===== WhatsApp invite, invite banner, install row ===== */
+.wa-btn{background:#25d366;color:#06301a}
+.wa-btn:hover{background:#3be07b}
+.code-row .wa-btn{margin-left:8px}
+.auth-invite{margin:12px 0 0;padding:9px 12px;border-radius:10px;background:rgba(66,199,134,.14);border:1px solid rgba(66,199,134,.45);color:#8ce4b4;font-size:13px;font-weight:700;line-height:1.4}
+.auth-invite[hidden]{display:none}
 /* ===== Map credit: shown briefly, then folds into the (i) button ===== */
 .maplibregl-ctrl-attrib.maplibregl-compact{margin:8px}
 /* ===== Map extras: roles, ping, note pins, sheets, weather, route options ===== */
@@ -527,6 +534,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
           <div class="auth-logo" aria-hidden="true">⬡</div>
           <h1 id="authTitle">Welcome back</h1>
           <p id="authSub">Sign in to continue to ONEROUTE</p>
+          <p id="authInvite" class="auth-invite" role="status" hidden></p>
         </div>
         <form id="authForm" novalidate>
           <div id="authAvatarField" hidden>
@@ -732,7 +740,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
         <button id="editWaypoints" class="secondary full">Edit route & stops</button>
       </section>
       <div class="card">
-        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button></div>
+        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button><button id="waInvite" class="wa-btn" aria-label="Invite friends on WhatsApp">💬 WhatsApp</button></div>
       </div>
       <div class="card"><h2>Live link for family</h2><p class="subtitle">Anyone with this link can watch the convoy on a map. It is read-only and needs no trip code, so only share it with people you trust.</p><button id="shareLive" class="full secondary">Share live link</button></div>
     </section>
@@ -783,7 +791,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button><button id="exportGpx" class="secondary">Export GPX</button><button id="exportJson" class="secondary">Export JSON</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
-      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
+      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button><button id="waInvite2" class="full wa-btn" style="margin-top:8px">💬 Invite on WhatsApp</button></div>
     </section>
   <footer class="legal-footer" style="padding-bottom:96px" aria-label="Legal information">
     <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> ·
@@ -1717,6 +1725,7 @@ socket.on('route-updated',update=>{
 function startApp(res){
   window.scrollTo(0,0);setTimeout(()=>window.scrollTo(0,0),80);
   pendingTrip=res;mapWaitShow();startWeather();
+  try{history.replaceState(null,'',location.pathname)}catch{}
   session={code:res.code,name:name()};
   $('setup').hidden=true;$('app').hidden=false;$('nav').hidden=false;
   $('tripcode').textContent=$('summarycode').textContent=res.code||'----';
@@ -1942,7 +1951,7 @@ socket.on('alert',a=>{
 });
 async function shareInvite(){
   if(!session)return;
-  const url=new URL(location.href);url.searchParams.set('code',session.code);
+  const url=new URL(inviteLink(session.code));
   const text=`Join my ONEROUTE convoy\nLink: ${url}\nCode: ${session.code}`;
   try{
     if(navigator.share)await navigator.share({title:'Join ONEROUTE',text,url:String(url)});
@@ -1955,7 +1964,9 @@ $('copy').onclick=async()=>{
   catch{window.prompt('Copy trip code',session.code)}
 };
 const invite=new URLSearchParams(location.search).get('code');
-if(invite)$('code').value=invite.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4);
+const inviteCode=invite?invite.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4):'';
+if(inviteCode)$('code').value=inviteCode;
+if(inviteCode.length===4){$('authInvite').hidden=false;$('authInvite').textContent='You’re invited to trip '+inviteCode+'. Sign in or create an account to join.'}
 $('quickStopToggle').onclick=()=>{
   const menu=$('quickStopMenu');menu.hidden=!menu.hidden;
   $('quickStopToggle').setAttribute('aria-expanded',String(!menu.hidden));
@@ -2345,6 +2356,22 @@ if(window.maplibregl&&!maplibregl.__oneroute){
   if(window.ResizeObserver)new ResizeObserver(()=>screen.style.setProperty('--bar-h',turn.offsetHeight+'px')).observe(turn);
 })();
 
+// ===== NEW: WhatsApp invite, install as an app, offline helper =====
+function inviteLink(code){return location.origin+'/?code='+encodeURIComponent(code)}
+function inviteText(code){return '🚗 Join my OneRoute convoy!\nTrip code: '+code+'\nOpen: '+inviteLink(code)+'\nSign in (or create an account), tick the location box and tap “Join trip”.'}
+function inviteWhatsApp(){
+  if(!session){showNotice('Start or join a trip first.');return}
+  const url='https://wa.me/?text='+encodeURIComponent(inviteText(session.code));
+  const w=window.open(url,'_blank','noopener');
+  if(!w)location.href=url;
+}
+$('waInvite').onclick=inviteWhatsApp;$('waInvite2').onclick=inviteWhatsApp;
+// The installable-app experiment was removed: if this browser saved its offline helper, retire it and its saved files
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(list=>list.forEach(r=>r.unregister())).catch(()=>{});
+  if(window.caches)caches.keys().then(keys=>keys.filter(k=>k.startsWith('oneroute-')).forEach(k=>caches.delete(k))).catch(()=>{});
+}
+
 // ===== NEW: profile pictures (shown on the map and in lists instead of the first letter) =====
 const AVATAR_RE=/^\/avatar\/[a-f0-9]{32}\.jpg$/;
 const safeAvatar=url=>typeof url==='string'&&AVATAR_RE.test(url)?url:null;
@@ -2479,6 +2506,7 @@ function enterApp(user){
   if(!$('name').value.trim())$('name').value=user.name;
   if(!socket.connected)socket.connect();
   loadVoiceInfo();
+  if(inviteCode.length===4&&!session)setTimeout(()=>{showNotice('Invite found: trip '+inviteCode+'. Tick the location box, then press Join trip.','ok');$('join').scrollIntoView({behavior:'smooth',block:'center'})},500);
 }
 function setAuthBusy(on){$('authSubmit').disabled=on;$('authSubmit').classList.toggle('loading',on)}
 $('authSwitch').onclick=()=>setAuthMode(authMode==='signin'?'signup':'signin');

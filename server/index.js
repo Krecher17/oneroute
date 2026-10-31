@@ -265,22 +265,15 @@ app.get('/api/trip/:code/export.json', (req, res) => {
 
 // Navigation voice: the page asks for an audio clip of a short instruction. The ElevenLabs key never leaves the server.
 const ttsHits = new Map();
-const bearerToken = (req) => {
-  const h = String(req.headers.authorization || '');
-  return h.startsWith('Bearer ') ? h.slice(7).trim() : '';
-};
-app.get('/api/voice-info', (_req, res) => res.json({ cloudVoice: ttsEnabled() }));
-app.post('/api/tts', async (req, res) => {
-  const user = authUserFromToken(bearerToken(req));
-  const clientKey = user ? `u:${user.id}` : `ip:${req.ip || 'anon'}`;
+app.get('/api/voice-info', requireAuth, (_req, res) => res.json({ cloudVoice: ttsEnabled() }));
+app.post('/api/tts', requireAuth, async (req, res) => {
   const now = Date.now();
-  const hit = ttsHits.get(clientKey) || { n: 0, reset: now + 60000 };
+  const hit = ttsHits.get(req.user.id) || { n: 0, reset: now + 60000 };
   if (now > hit.reset) { hit.n = 0; hit.reset = now + 60000; }
   hit.n += 1;
-  ttsHits.set(clientKey, hit);
+  ttsHits.set(req.user.id, hit);
   if (ttsHits.size > 2000) ttsHits.clear();
-  const maxPerMin = user ? 45 : 15;
-  if (hit.n > maxPerMin) return res.status(429).json({ error: 'Too many voice requests.' });
+  if (hit.n > 40) return res.status(429).json({ error: 'Too many voice requests.' });
   try {
     const audio = await speakText(req.body?.text);
     res.set({ 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=86400' });
