@@ -780,7 +780,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
       <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
       <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
-      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button><button id="exportGpx" class="secondary">Export GPX</button><button id="exportJson" class="secondary">Export JSON</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
       <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
@@ -800,8 +800,22 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
     <h2 id="pinSheetTitle">Drop a pin for the convoy</h2>
     <div class="kind-row" id="pinKinds" role="radiogroup" aria-label="Pin type"></div>
     <label class="field-label" for="pinNote">Note</label>
-    <input id="pinNote" maxlength="80" placeholder="e.g. good chai here" autocomplete="off">
+    <input id="pinNote" maxlength="80" placeholder="e.g. speed trap, pothole, food stop" autocomplete="off">
     <div class="sheet-actions"><button type="button" id="pinHere">Drop at my location</button><button type="button" id="pinChoose" class="secondary">Choose on map</button><button type="button" id="pinCancel" class="secondary">Cancel</button></div>
+  </div>
+  <div class="sheet" id="stopVoteSheet" role="dialog" aria-labelledby="stopVoteTitle" hidden>
+    <h2 id="stopVoteTitle">☕ Convoy Stop Proposed</h2>
+    <p class="subtitle" id="stopVoteSubtitle">A driver proposed a regrouping stop.</p>
+    <div id="stopVoteDetails" style="margin:12px 0;font-size:15px;font-weight:700"></div>
+    <div class="metrics">
+      <div class="metric"><label>Yes votes</label><strong id="stopVoteYes">1</strong></div>
+      <div class="metric"><label>No votes</label><strong id="stopVoteNo">0</strong></div>
+      <div class="metric"><label>Needed</label><strong id="stopVoteNeeded">2</strong></div>
+    </div>
+    <div class="sheet-actions" style="margin-top:14px">
+      <button type="button" id="stopVoteYesBtn" style="background:#42c786;color:#17191d">Vote Yes (Stop)</button>
+      <button type="button" id="stopVoteNoBtn" class="secondary">Vote No (Skip)</button>
+    </div>
   </div>
   <div class="sheet" id="helpSheet" role="dialog" aria-labelledby="helpTitle" hidden>
     <h2 id="helpTitle">🆘 Help nearby</h2>
@@ -1844,6 +1858,10 @@ socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
 socket.on('cars',cars=>{
   if(!Array.isArray(cars))return;
   navCars=cars.slice();lastCars=cars.slice();iAmCreator=!!cars.find(c=>c.id===socket.id&&c.creator);syncPins();
+  const me=cars.find(c=>c.id===socket.id);
+  if(me&&me.pacing){
+    showBanner(`<b>⏱ Regroup Pacing:</b> ${esc(me.pacing.text)}`,'warn',12000);
+  }
   if(navOpen){navRenderCars();navUpdateInstruction();}
   if(!map)return;
   const bounds=new maplibregl.LngLatBounds(),seen=new Set();
@@ -1995,11 +2013,15 @@ socket.on('ping',m=>{
   }else showNotice((m.fromName||'Someone')+' pinged '+(m.targetName||'a driver'),'ok');
 });
 
-// --- Note pins ---
-const PIN_KINDS=[['good','👍','Good place'],['food','☕','Food / chai'],['bad','⚠️','Bad road'],['police','🚓','Police'],['photo','📷','Photo spot'],['other','📍','Other']];
+// --- Note pins & Hazard Crowd-Sourcing ---
+const PIN_KINDS=[
+  ['good','👍','Good place'],['food','☕','Food / chai'],['police','🚓','Police / Speed Trap'],
+  ['hazard','⚠️','Hazard / Danger'],['pothole','🕳️','Pothole'],['accident','💥','Accident'],
+  ['fuel','⛽','Fuel / EV'],['bad','⛔','Bad road'],['photo','📷','Photo spot'],['other','📍','Other']
+];
 const PIN_ICON=Object.fromEntries(PIN_KINDS.map(k=>[k[0],k[1]]));
 const pinsStore=new Map(),pinMarkers=new Map();
-let pinKind='good',dropMode=false;
+let pinKind='hazard',dropMode=false;
 function renderPinKinds(){
   const row=$('pinKinds');row.replaceChildren();
   PIN_KINDS.forEach(([k,icon,label])=>{const b=mk('button','',icon+' '+label);b.type='button';b.setAttribute('role','radio');b.setAttribute('aria-checked',String(k===pinKind));b.onclick=()=>{pinKind=k;renderPinKinds()};row.append(b)});
@@ -2011,11 +2033,42 @@ function syncPins(){
     const el=mk('div','note-pin');el.append(mk('span','',PIN_ICON[p.kind]||'📍'));el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',(p.text||'Pin')+' by '+p.name);
     const popup=new maplibregl.Popup({offset:22,closeButton:true});
     const open=()=>{
-      const box=mk('div','');box.style.cssText='color:#17191d;font:14px system-ui;max-width:220px';
+      const box=mk('div','');box.style.cssText='color:#17191d;font:14px system-ui;max-width:240px';
       const t=mk('b','',p.text||(PIN_KINDS.find(k=>k[0]===p.kind)||[])[2]||'Pin');
       const by=mk('div','','by '+p.name+' · '+new Date(p.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));by.style.cssText='font-size:12px;opacity:.7;margin:2px 0 6px';
       box.append(t,by);
-      if(authUser&&(p.userId===authUser.id||iAmCreator)){const rm=mk('button','mini-btn','Remove pin');rm.type='button';rm.onclick=()=>socket.emit('remove-pin',{id},res=>{if(!res||!res.ok)showNotice((res&&res.error)||'Could not remove it.')});box.append(rm)}
+
+      // Hazard Verification / Voting
+      const voteRow=mk('div','');voteRow.style.cssText='display:flex;gap:6px;margin:8px 0';
+      const upBtn=mk('button','mini-btn','👍 Still there '+(p.upvotes?.length||1));
+      upBtn.type='button';
+      upBtn.onclick=()=>socket.emit('vote-pin',{id:p.id,vote:'up'},res=>{if(res&&res.ok){p.upvotes=new Array(res.upvotes);popup.remove();open()}});
+      const downBtn=mk('button','mini-btn','✕ Cleared '+(p.downvotes?.length||0));
+      downBtn.type='button';
+      downBtn.onclick=()=>socket.emit('vote-pin',{id:p.id,vote:'down'},res=>{if(res&&res.ok){if(res.removed){popup.remove()}else{p.downvotes=new Array(res.downvotes);popup.remove();open()}}});
+      voteRow.append(upBtn,downBtn);
+      box.append(voteRow);
+
+      // Propose Stop button if near food or fuel
+      if(['food','fuel','good'].includes(p.kind)){
+        const stopBtn=mk('button','mini-btn','Propose Stop Here');
+        stopBtn.style.cssText='background:#f4c430;color:#17191d;margin-bottom:6px;width:100%';
+        stopBtn.onclick=()=>{
+          socket.emit('propose-stop',{lat:p.lat,lon:p.lon,label:p.text||p.name+' stop'},res=>{
+            popup.remove();
+            if(res&&res.ok)showNotice('Stop proposal sent to convoy.','ok');
+            else showNotice((res&&res.error)||'Could not propose stop.');
+          });
+        };
+        box.append(stopBtn);
+      }
+
+      if(authUser&&(p.userId===authUser.id||iAmCreator)){
+        const rm=mk('button','mini-btn','Remove pin');
+        rm.type='button';
+        rm.onclick=()=>socket.emit('remove-pin',{id},res=>{if(!res||!res.ok)showNotice((res&&res.error)||'Could not remove it.')});
+        box.append(rm);
+      }
       popup.setDOMContent(box).setLngLat([p.lon,p.lat]).addTo(map);
     };
     el.addEventListener('click',e=>{e.stopPropagation();open()});el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});
@@ -2025,7 +2078,8 @@ function syncPins(){
 }
 socket.on('pins-history',list=>{pinsStore.clear();(Array.isArray(list)?list:[]).forEach(p=>pinsStore.set(p.id,p));syncPins()});
 socket.on('pin-added',p=>{if(!p)return;pinsStore.set(p.id,p);syncPins();if(p.userId!==(authUser&&authUser.id))showNotice((PIN_ICON[p.kind]||'📍')+' '+p.name+': '+(p.text||'dropped a pin'),'ok')});
-socket.on('pin-removed',m=>{if(m){pinsStore.delete(m.id);syncPins()}});
+socket.on('pin-updated',m=>{if(!m)return;const p=pinsStore.get(m.id);if(p){p.upvotes=new Array(m.upvotes);p.downvotes=new Array(m.downvotes)}});
+socket.on('pin-removed',m=>{if(m){pinsStore.delete(m.id);syncPins();if(m.reason==='cleared')showNotice('Hazard marked as cleared.','ok')}});
 function sendPin(lat,lon){
   socket.emit('drop-pin',{lat,lon,text:$('pinNote').value,kind:pinKind},res=>{
     if(res&&res.ok){$('pinNote').value='';closeSheets();showNotice('Pin shared with the convoy.','ok')}else showNotice((res&&res.error)||'Could not drop the pin.');
@@ -2040,6 +2094,76 @@ $('pinChoose').onclick=()=>{
 };
 function cancelDrop(){dropMode=false;if(map)map.getCanvas().style.cursor='';$('pinToggle').setAttribute('aria-expanded','false')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheets();if(dropMode)cancelDrop()}});
+
+// --- Group Stop Proposal & Voting ---
+let currentStopProposal = null;
+function openStopVote(prop){
+  if(!prop)return;
+  currentStopProposal = prop;
+  $('stopVoteSubtitle').textContent = (prop.proposerName || 'A driver') + ' proposed a stop:';
+  $('stopVoteDetails').textContent = '📍 ' + (prop.label || 'Planned Stop');
+  $('stopVoteYes').textContent = prop.votesYes ? prop.votesYes.length : 1;
+  $('stopVoteNo').textContent = prop.votesNo ? prop.votesNo.length : 0;
+  closeSheets('stopVoteSheet');
+  $('stopVoteSheet').hidden = false;
+}
+
+$('stopVoteYesBtn').onclick = () => {
+  if(!currentStopProposal) return;
+  socket.emit('vote-stop', { id: currentStopProposal.id, vote: 'yes' }, res => {
+    if(res && res.ok){
+      showNotice('Voted Yes for stop.', 'ok');
+      $('stopVoteSheet').hidden = true;
+    }
+  });
+};
+
+$('stopVoteNoBtn').onclick = () => {
+  if(!currentStopProposal) return;
+  socket.emit('vote-stop', { id: currentStopProposal.id, vote: 'no' }, res => {
+    if(res && res.ok){
+      showNotice('Voted No for stop.', 'ok');
+      $('stopVoteSheet').hidden = true;
+    }
+  });
+};
+
+socket.on('stop-proposal', prop => {
+  if(!prop) return;
+  showBanner(`<b>☕ Stop Proposed:</b> ${esc(prop.proposerName)} proposed: "${esc(prop.label)}"`, 'ok', 10000);
+  announce(`${prop.proposerName} proposed a convoy stop at ${prop.label}`);
+  openStopVote(prop);
+});
+
+socket.on('stop-vote-update', upd => {
+  if(currentStopProposal && currentStopProposal.id === upd.id){
+    $('stopVoteYes').textContent = upd.yes;
+    $('stopVoteNo').textContent = upd.no;
+    $('stopVoteNeeded').textContent = upd.required;
+  }
+});
+
+socket.on('stop-proposal-result', res => {
+  $('stopVoteSheet').hidden = true;
+  if(res.result === 'approved'){
+    showBanner(`<b>✅ Stop Approved!</b> Stop at "${esc(res.label)}" added to convoy route.`, 'ok', 10000);
+    announce(`Convoy agreed to stop at ${res.label}`);
+  } else {
+    showNotice(`Convoy voted against stopping at "${res.label}".`);
+  }
+  currentStopProposal = null;
+});
+
+// --- GPX and JSON Export ---
+$('exportGpx').onclick = () => {
+  if(!session || !session.code){ showNotice('Join or start a trip first.'); return; }
+  window.open('/api/trip/' + encodeURIComponent(session.code) + '/export.gpx', '_blank');
+};
+
+$('exportJson').onclick = () => {
+  if(!session || !session.code){ showNotice('Join or start a trip first.'); return; }
+  window.open('/api/trip/' + encodeURIComponent(session.code) + '/export.json', '_blank');
+};
 
 // --- Nearest help when someone taps SOS ---
 const helpData={};let helpShownId=null;
