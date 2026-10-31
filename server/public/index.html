@@ -372,10 +372,7 @@ button:active,.button:active,.nav-btn:active{transform:scale(.97)}
 .nav-sheet-handle .chev{transition:transform .2s;font-size:12px;color:var(--muted)}
 .nav-bottom.open .nav-sheet-handle .chev{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.nav-sheet-handle .chev{transition:none}}
-/* ===== WhatsApp invite, invite banner, install row ===== */
-.wa-btn{background:#25d366;color:#06301a}
-.wa-btn:hover{background:#3be07b}
-.code-row .wa-btn{margin-left:8px}
+/* ===== invite banner, install row ===== */
 .auth-invite{margin:12px 0 0;padding:9px 12px;border-radius:10px;background:rgba(66,199,134,.14);border:1px solid rgba(66,199,134,.45);color:#8ce4b4;font-size:13px;font-weight:700;line-height:1.4}
 .auth-invite[hidden]{display:none}
 /* ===== Map credit: shown briefly, then folds into the (i) button ===== */
@@ -740,7 +737,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
         <button id="editWaypoints" class="secondary full">Edit route & stops</button>
       </section>
       <div class="card">
-        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button><button id="waInvite" class="wa-btn" aria-label="Invite friends on WhatsApp">💬 WhatsApp</button></div>
+        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button></div>
       </div>
       <div class="card"><h2>Live link for family</h2><p class="subtitle">Anyone with this link can watch the convoy on a map. It is read-only and needs no trip code, so only share it with people you trust.</p><button id="shareLive" class="full secondary">Share live link</button></div>
     </section>
@@ -791,7 +788,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
-      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button><button id="waInvite2" class="full wa-btn" style="margin-top:8px">💬 Invite on WhatsApp</button></div>
+      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
     </section>
   <footer class="legal-footer" style="padding-bottom:96px" aria-label="Legal information">
     <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> ·
@@ -2345,16 +2342,9 @@ if(window.maplibregl&&!maplibregl.__oneroute){
   if(window.ResizeObserver)new ResizeObserver(()=>screen.style.setProperty('--bar-h',turn.offsetHeight+'px')).observe(turn);
 })();
 
-// ===== NEW: WhatsApp invite, install as an app, offline helper =====
+// ===== invite link helpers =====
 function inviteLink(code){return location.origin+'/?code='+encodeURIComponent(code)}
 function inviteText(code){return '🚗 Join my OneRoute convoy!\nTrip code: '+code+'\nOpen: '+inviteLink(code)+'\nSign in (or create an account), tick the location box and tap “Join trip”.'}
-function inviteWhatsApp(){
-  if(!session){showNotice('Start or join a trip first.');return}
-  const url='https://wa.me/?text='+encodeURIComponent(inviteText(session.code));
-  const w=window.open(url,'_blank','noopener');
-  if(!w)location.href=url;
-}
-$('waInvite').onclick=inviteWhatsApp;$('waInvite2').onclick=inviteWhatsApp;
 // The installable-app experiment was removed: if this browser saved its offline helper, retire it and its saved files
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(list=>list.forEach(r=>r.unregister())).catch(()=>{});
