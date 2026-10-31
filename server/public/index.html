@@ -788,7 +788,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
       <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
       <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
       <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
-      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button><button id="exportGpx" class="secondary">Export GPX</button><button id="exportJson" class="secondary">Export JSON</button></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
       <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
       <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
       <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button><button id="waInvite2" class="full wa-btn" style="margin-top:8px">💬 Invite on WhatsApp</button></div>
@@ -2164,17 +2164,6 @@ socket.on('stop-proposal-result', res => {
   }
   currentStopProposal = null;
 });
-
-// --- GPX and JSON Export ---
-$('exportGpx').onclick = () => {
-  if(!session || !session.code){ showNotice('Join or start a trip first.'); return; }
-  window.open('/api/trip/' + encodeURIComponent(session.code) + '/export.gpx', '_blank');
-};
-
-$('exportJson').onclick = () => {
-  if(!session || !session.code){ showNotice('Join or start a trip first.'); return; }
-  window.open('/api/trip/' + encodeURIComponent(session.code) + '/export.json', '_blank');
-};
 
 // --- Nearest help when someone taps SOS ---
 const helpData={};let helpShownId=null;
