@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { makeRoute, snap } from './geo.js';
-import { fetchRoute, geocode } from './routing.js';
+import { fetchRoute, fetchRouteWithSteps, geocode } from './routing.js';
 import { bestRejoin } from './rejoin.js';
 import { nearestHelp, getWeather, fetchAlternatives, thin, ttsEnabled, ttsStatus, speakText } from './features.js';
 import { registerAuthRoutes, requireAuth, authUserFromToken, avatarForUser, authStatus } from './auth.js';
@@ -25,7 +25,7 @@ const DEFAULT_SPEED = 50;
 const MAX_WAYPOINTS = 20;
 const SWEEPER_WARN_KM = 2; // the last car falling this far behind alerts everyone
 const MAX_PINS = 50;
-const PIN_KINDS = new Set(['good', 'bad', 'police', 'photo', 'food', 'other']);
+const PIN_KINDS = new Set(['good', 'bad', 'police', 'photo', 'food', 'hazard', 'pothole', 'accident', 'fuel', 'other']);
 const WEATHER_TTL_MS = 15 * 60 * 1000;
 
 // Voice-message settings
@@ -205,6 +205,64 @@ app.get('/api/live/:token', liveLimiter, (req, res) => {
   });
 });
 
+// Trip Export endpoints: GPX and JSON telemetry download
+app.get('/api/trip/:code/export.gpx', (req, res) => {
+  const trip = trips.get(String(req.params.code || '').toUpperCase().trim());
+  if (!trip) return res.status(404).send('Trip not found or expired.');
+
+  const points = (trip.route.coords || []).map(([lon, lat]) => `      <trkpt lat="${lat}" lon="${lon}"></trkpt>`).join('\n');
+  const waypointsXml = (trip.waypoints || []).map((w, i) => `  <wpt lat="${w.lat}" lon="${w.lon}"><name>${w.label || `Waypoint ${i + 1}`}</name></wpt>`).join('\n');
+  const destXml = trip.destination ? `  <wpt lat="${trip.destination.lat}" lon="${trip.destination.lon}"><name>${trip.destination.label || 'Destination'}</name></wpt>` : '';
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ONEROUTE - https://oneroute.dpdns.org" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>ONEROUTE Trip ${trip.code}</name>
+    <time>${new Date(trip.createdAt).toISOString()}</time>
+  </metadata>
+${waypointsXml}
+${destXml}
+  <trk>
+    <name>Planned Convoy Route to ${trip.destination.label || 'Destination'}</name>
+    <trkseg>
+${points}
+    </trkseg>
+  </trk>
+</gpx>`;
+
+  res.set({
+    'Content-Type': 'application/gpx+xml',
+    'Content-Disposition': `attachment; filename="oneroute-${trip.code}.gpx"`,
+  });
+  res.send(gpx);
+});
+
+app.get('/api/trip/:code/export.json', (req, res) => {
+  const trip = trips.get(String(req.params.code || '').toUpperCase().trim());
+  if (!trip) return res.status(404).json({ error: 'Trip not found or expired.' });
+
+  res.set({
+    'Content-Type': 'application/json',
+    'Content-Disposition': `attachment; filename="oneroute-${trip.code}-report.json"`,
+  });
+  res.json({
+    code: trip.code,
+    destination: trip.destination,
+    start: trip.start,
+    waypoints: trip.waypoints,
+    totalKm: +trip.route.totalKm.toFixed(2),
+    createdAt: trip.createdAt,
+    summary: buildSummary(trip),
+    pins: trip.pins || [],
+    quickMessages: trip.quickMessages || [],
+    members: [...trip.members.values()].map((m) => ({
+      name: m.name,
+      arrived: m.arrived,
+      snapKm: +m.snapKm.toFixed(2),
+      speed: Math.round(m.speed),
+    })),
+  });
+});
+
 // Navigation voice: the page asks for an audio clip of a short instruction. The ElevenLabs key never leaves the server.
 const ttsHits = new Map();
 const bearerToken = (req) => {
@@ -273,19 +331,42 @@ function cleanPoint(p, fallbackLabel = 'Waypoint') {
 async function buildRoute(start, destination, waypoints = []) {
   const stops = [start, ...waypoints, destination];
   const fullCoords = [];
+  const fullSteps = [];
+  let cumDistanceMeters = 0;
 
   for (let i = 0; i < stops.length - 1; i++) {
     const from = stops[i];
     const to = stops[i + 1];
-    const leg = await fetchRoute([from.lon, from.lat], [to.lon, to.lat]);
+    let leg;
+    let steps = [];
+    try {
+      const routeData = await fetchRouteWithSteps([from.lon, from.lat], [to.lon, to.lat]);
+      leg = routeData.coordinates;
+      steps = routeData.steps || [];
+    } catch {
+      leg = await fetchRoute([from.lon, from.lat], [to.lon, to.lat]);
+    }
     if (!Array.isArray(leg) || leg.length < 2) {
       throw new Error(`No route found for leg ${i + 1}`);
     }
     // Avoid duplicating the shared coordinate between adjacent route legs.
     fullCoords.push(...(i === 0 ? leg : leg.slice(1)));
+
+    for (const step of steps) {
+      fullSteps.push({
+        type: step.type,
+        modifier: step.modifier,
+        road: step.road,
+        distance: step.distance,
+        distanceKm: +(step.distance / 1000).toFixed(2),
+        maneuverLocation: step.maneuverLocation,
+        routeKm: +((cumDistanceMeters + (step.distance || 0)) / 1000).toFixed(2),
+      });
+      cumDistanceMeters += step.distance || 0;
+    }
   }
 
-  return fullCoords;
+  return { coords: fullCoords, steps: fullSteps };
 }
 
 function addMember(trip, socket, name) {
@@ -535,6 +616,23 @@ function tick() {
             || others[others.length - 1] || null;
         }
 
+        // Sweeper pacing calculation: if sweeper or last car is trailing far behind, recommend pacing speed to leader
+        let pacingAdvice = null;
+        if (leaderM && sweeperM && sweeperM !== leaderM) {
+          const sweeperGap = +(leaderM.snapKm - sweeperM.snapKm).toFixed(2);
+          if (sweeperGap >= SWEEPER_WARN_KM) {
+            const leadSpeed = Math.round(leaderM.speed || DEFAULT_SPEED);
+            const sweepSpeed = Math.round(sweeperM.speed || MIN_SPEED);
+            const targetSpeed = Math.max(MIN_SPEED, Math.min(leadSpeed - 20, Math.round(sweepSpeed * 0.85)));
+            pacingAdvice = {
+              sweeperName: sweeperM.name,
+              gapKm: sweeperGap,
+              targetSpeedKmh: targetSpeed,
+              text: `Sweeper (${sweeperM.name}) is ${sweeperGap} km behind. Slow to ~${targetSpeed} km/h to regroup.`,
+            };
+          }
+        }
+
         const report = members.filter((member) => member.pos).map((member) => {
           try {
             const live = isLive(member);
@@ -550,6 +648,7 @@ function tick() {
               io.to(trip.code).emit('alert', {
                 type: 'gap', id: member.id, name: member.name, gapKm, gapMin,
                 role: member === sweeperM ? 'sweeper' : null,
+                pacing: member === sweeperM && pacingAdvice ? pacingAdvice : null,
               });
               member.sepGap = openSeparation(trip, member, 'behind', gapKm);
             }
@@ -590,6 +689,7 @@ function tick() {
               etaMin: live && !off && !member.arrived && !member.approx
                 ? Math.round(((trip.route.totalKm - member.snapKm) / speed) * 60)
                 : null,
+              pacing: member === leaderM ? pacingAdvice : null,
             };
           } catch (err) {
             console.error(`Error processing member ${member?.id} for report:`, err);
@@ -676,13 +776,14 @@ io.on('connection', (socket) => {
         return ack({ ok: false, error: 'Missing or invalid start or destination.' });
       }
 
-      const coords = await buildRoute(cleanStart, cleanDestination, []);
+      const { coords, steps } = await buildRoute(cleanStart, cleanDestination, []);
       const code = newCode();
       const viewToken = crypto.randomBytes(9).toString('hex');
       trip = {
         code,
         start: cleanStart,
         route: makeRoute(coords),
+        steps: steps || [],
         destination: cleanDestination,
         waypoints: [],
         creatorId: socket.id,
@@ -696,6 +797,7 @@ io.on('connection', (socket) => {
         creatorUserId: socket.data?.user?.id || null,
         roles: { leaderUserId: null, sweeperUserId: null },
         pins: [],
+        stopProposals: [],
         weather: null,
         altCache: null,
       };
@@ -703,8 +805,8 @@ io.on('connection', (socket) => {
       viewTokens.set(viewToken, code);
       addMember(trip, socket, name);
 
-      console.log(`[${code}] trip created (${trip.route.totalKm.toFixed(1)} km)`);
-      ack({ ok: true, code, route: coords, destination: cleanDestination, waypoints: [], viewToken, creatorId: socket.id });
+      console.log(`[${code}] trip created (${trip.route.totalKm.toFixed(1)} km, ${steps?.length || 0} steps)`);
+      ack({ ok: true, code, route: coords, steps: trip.steps, destination: cleanDestination, waypoints: [], viewToken, creatorId: socket.id });
     } catch (error) {
       console.error('create-trip failed:', error.message);
       if (typeof ack === 'function') {
@@ -759,10 +861,12 @@ io.on('connection', (socket) => {
           code: trip.code,
           viewToken: trip.viewToken,
           route: trip.route.coords,
+          steps: trip.steps || [],
           destination: trip.destination,
           start: trip.start,
           waypoints: trip.waypoints,
           creatorId: trip.creatorId,
+          activeStopProposal: trip.stopProposals?.find((p) => p.status === 'active') || null,
         });
       }
     } catch (error) {
@@ -961,11 +1065,46 @@ io.on('connection', (socket) => {
     const pin = {
       id: crypto.randomBytes(5).toString('hex'), userId: me.userId, name: me.name, kind, text,
       lat: Number(data.lat), lon: Number(data.lon), at: Date.now(),
+      upvotes: [me.id],
+      downvotes: [],
     };
     trip.pins.push(pin);
     if (trip.pins.length > MAX_PINS) trip.pins.shift();
     io.to(trip.code).emit('pin-added', pin);
-    reply({ ok: true });
+    reply({ ok: true, pin });
+  });
+
+  // Vote on a pin ("still there" -> upvote, "cleared / gone" -> downvote)
+  socket.on('vote-pin', (data, ack) => {
+    const reply = typeof ack === 'function' ? ack : () => {};
+    const me = memberOf();
+    if (!me || !me.online) return reply({ ok: false, error: 'Join a trip first.' });
+    const pin = (trip.pins || []).find((p) => p.id === String(data?.id || ''));
+    if (!pin) return reply({ ok: false, error: 'Pin not found.' });
+
+    const vote = String(data?.vote || ''); // 'up' or 'down'
+    if (!['up', 'down'].includes(vote)) return reply({ ok: false, error: 'Invalid vote.' });
+
+    if (!Array.isArray(pin.upvotes)) pin.upvotes = [];
+    if (!Array.isArray(pin.downvotes)) pin.downvotes = [];
+
+    // Remove previous votes by this member
+    pin.upvotes = pin.upvotes.filter((id) => id !== me.id);
+    pin.downvotes = pin.downvotes.filter((id) => id !== me.id);
+
+    if (vote === 'up') pin.upvotes.push(me.id);
+    else pin.downvotes.push(me.id);
+
+    // If downvotes exceed upvotes by 2 or more, auto-remove the pin as resolved/cleared
+    if (pin.downvotes.length - pin.upvotes.length >= 2) {
+      const idx = trip.pins.indexOf(pin);
+      if (idx >= 0) trip.pins.splice(idx, 1);
+      io.to(trip.code).emit('pin-removed', { id: pin.id, reason: 'cleared' });
+      return reply({ ok: true, removed: true });
+    }
+
+    io.to(trip.code).emit('pin-updated', { id: pin.id, upvotes: pin.upvotes.length, downvotes: pin.downvotes.length });
+    reply({ ok: true, upvotes: pin.upvotes.length, downvotes: pin.downvotes.length });
   });
 
   socket.on('remove-pin', (data, ack) => {
@@ -978,6 +1117,95 @@ io.on('connection', (socket) => {
     const [removed] = trip.pins.splice(index, 1);
     io.to(trip.code).emit('pin-removed', { id: removed.id });
     reply({ ok: true });
+  });
+
+  // ---------- Group Stop Voting ----------
+  // Propose a fuel/food/rest stop along the route
+  socket.on('propose-stop', (data, ack) => {
+    const reply = typeof ack === 'function' ? ack : () => {};
+    const me = memberOf();
+    if (!me || !me.online) return reply({ ok: false, error: 'Join a trip first.' });
+    if (!validPoint({ lat: data?.lat, lon: data?.lon })) return reply({ ok: false, error: 'Pick a valid location for the stop.' });
+
+    const active = trip.stopProposals.find((p) => p.status === 'active');
+    if (active && Date.now() - active.at < 60000) {
+      return reply({ ok: false, error: 'A stop proposal is already being voted on.' });
+    }
+
+    const label = String(data?.label || 'Planned Stop').trim().slice(0, 80) || 'Planned Stop';
+    const proposal = {
+      id: crypto.randomBytes(5).toString('hex'),
+      proposerId: me.id,
+      proposerName: me.name,
+      label,
+      lat: Number(data.lat),
+      lon: Number(data.lon),
+      at: Date.now(),
+      status: 'active',
+      votesYes: [me.id],
+      votesNo: [],
+    };
+
+    trip.stopProposals.push(proposal);
+    io.to(trip.code).emit('stop-proposal', proposal);
+    reply({ ok: true, proposal });
+  });
+
+  // Vote on an active stop proposal
+  socket.on('vote-stop', async (data, ack) => {
+    const reply = typeof ack === 'function' ? ack : () => {};
+    const me = memberOf();
+    if (!me || !me.online) return reply({ ok: false, error: 'Join a trip first.' });
+    const proposal = trip.stopProposals.find((p) => p.id === String(data?.id || '') && p.status === 'active');
+    if (!proposal) return reply({ ok: false, error: 'No active proposal found.' });
+
+    const choice = data?.vote === 'yes' ? 'yes' : 'no';
+    proposal.votesYes = (proposal.votesYes || []).filter((id) => id !== me.id);
+    proposal.votesNo = (proposal.votesNo || []).filter((id) => id !== me.id);
+
+    if (choice === 'yes') proposal.votesYes.push(me.id);
+    else proposal.votesNo.push(me.id);
+
+    const activeDrivers = [...trip.members.values()].filter((m) => m.online);
+    const majority = Math.ceil(activeDrivers.length / 2);
+
+    io.to(trip.code).emit('stop-vote-update', {
+      id: proposal.id,
+      yes: proposal.votesYes.length,
+      no: proposal.votesNo.length,
+      required: majority,
+    });
+
+    if (proposal.votesYes.length >= majority) {
+      proposal.status = 'approved';
+      io.to(trip.code).emit('stop-proposal-result', { id: proposal.id, result: 'approved', label: proposal.label });
+      // Add as a new waypoint and rebuild the route automatically
+      try {
+        const newWaypoints = [...trip.waypoints, { lat: proposal.lat, lon: proposal.lon, label: proposal.label }];
+        const { coords, steps } = await buildRoute(trip.start, trip.destination, newWaypoints);
+        trip.route = makeRoute(coords);
+        trip.steps = steps || [];
+        trip.waypoints = newWaypoints;
+        const update = {
+          code: trip.code,
+          route: coords,
+          steps: trip.steps,
+          destination: trip.destination,
+          start: trip.start,
+          waypoints: trip.waypoints,
+          totalKm: +trip.route.totalKm.toFixed(2),
+        };
+        io.to(trip.code).emit('route-updated', update);
+        io.to(trip.code).emit('waypoints', trip.waypoints);
+      } catch (err) {
+        console.error('Failed to auto-add approved stop to route:', err);
+      }
+    } else if (proposal.votesNo.length > activeDrivers.length - majority) {
+      proposal.status = 'rejected';
+      io.to(trip.code).emit('stop-proposal-result', { id: proposal.id, result: 'rejected', label: proposal.label });
+    }
+
+    reply({ ok: true, status: proposal.status });
   });
 
   // Weather at the destination and planned stops (cached for 15 minutes per trip)
@@ -1073,8 +1301,9 @@ io.on('connection', (socket) => {
         cleanWaypoints.push(point);
       }
 
-      const coords = await buildRoute(trip.start, trip.destination, cleanWaypoints);
+      const { coords, steps } = await buildRoute(trip.start, trip.destination, cleanWaypoints);
       trip.route = makeRoute(coords);
+      trip.steps = steps || [];
       trip.waypoints = cleanWaypoints;
 
       // Reset route-progress calculations so old route distances are not reused.
@@ -1094,6 +1323,7 @@ io.on('connection', (socket) => {
       const update = {
         code: trip.code,
         route: coords,
+        steps: trip.steps,
         destination: trip.destination,
         start: trip.start,
         waypoints: trip.waypoints,
@@ -1101,7 +1331,7 @@ io.on('connection', (socket) => {
       };
       io.to(trip.code).emit('route-updated', update);
       io.to(trip.code).emit('waypoints', trip.waypoints);
-      console.log(`[${trip.code}] waypoints updated (${cleanWaypoints.length} stops; ${trip.route.totalKm.toFixed(1)} km)`);
+      console.log(`[${trip.code}] waypoints updated (${cleanWaypoints.length} stops; ${trip.route.totalKm.toFixed(1)} km, ${trip.steps.length} steps)`);
 
       if (typeof ack === 'function') ack({ ok: true, ...update });
     } catch (error) {
