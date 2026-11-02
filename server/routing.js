@@ -242,14 +242,29 @@ function similarity(query, placeName) {
   return Math.max(plain, sound * 0.95);
 }
 
-// Other spellings worth trying: shorter beginnings, and a missing "a" inside consonant clusters.
+// Other spellings worth trying: shorter beginnings, doubled consonants ("ambapuzha" -> "ambappuzha"),
+// and a missing "a" inside consonant clusters.
 function spellingVariants(word) {
   const w = word.toLowerCase();
+  const isCons = (c) => /[bcdfgjklmnpqrstvwxz]/.test(c);
+  const isVowel = (c) => /[aeiou]/.test(c);
   const out = new Set();
-  for (let cut = 1; cut <= 4 && w.length - cut >= 4; cut++) out.add(w.slice(0, w.length - cut));
+
+  // Shorter beginnings. Short ones are broad, so they are searched with a bigger limit.
+  for (let cut = 1; cut <= 5 && w.length - cut >= 4; cut++) out.add(w.slice(0, w.length - cut));
+
+  // Doubled consonant between vowels: Indian place names often have these (Ambalappuzha, Kozhikode).
+  let doubled = 0;
+  for (let i = 1; i < w.length - 1 && doubled < 3; i++) {
+    if (isCons(w[i]) && isVowel(w[i - 1]) && isVowel(w[i + 1]) && w[i] !== "h") {
+      out.add(w.slice(0, i + 1) + w[i] + w.slice(i + 1));
+      doubled++;
+    }
+  }
+
+  // Missing "a" inside a consonant cluster.
   let added = 0;
-  for (let i = 1; i < w.length - 1 && added < 4; i++) {
-    const isCons = (c) => /[bcdfgjklmnpqrstvwxz]/.test(c);
+  for (let i = 1; i < w.length - 1 && added < 3; i++) {
     const digraph = w[i + 1] === "h"; // sh, th, zh, kh... are one sound, do not split
     if (isCons(w[i]) && isCons(w[i + 1]) && !digraph && !(w[i] === "n" && "gk".includes(w[i + 1]))) {
       out.add(w.slice(0, i + 1) + "a" + w.slice(i + 1));
@@ -264,7 +279,7 @@ async function didYouMean(search) {
   const lastWord = search.split(/\s+/).pop();
   const prefix = search.slice(0, search.length - lastWord.length);
   const variants = spellingVariants(lastWord).map((v) => prefix + v);
-  const settled = await Promise.allSettled(variants.map((v) => photonSearch(v, 15)));
+  const settled = await Promise.allSettled(variants.map((v) => photonSearch(v, v.length <= 5 ? 40 : 15)));
   const pool = dedupe(settled.flatMap((r) => (r.status === "fulfilled" ? r.value : [])));
   return pool
     .map((r) => ({ ...r, score: similarity(lastWord, r.label.split(",")[0]) }))
@@ -298,10 +313,12 @@ export async function geocode(query) {
   }
 
   let firstError = null;
+  const log = (step, n) => console.log(`[geocode] "${search}" ${step}: ${n} result(s)`);
   const attempt = async (fn, text) => {
     try {
       return await fn(text);
     } catch (error) {
+      console.error(`[geocode] "${text}" failed: ${error.message}`);
       firstError = firstError || error; // remember it, but keep trying other methods
       return [];
     }
@@ -309,10 +326,12 @@ export async function geocode(query) {
 
   // 1) Exact search
   let results = await attempt(nominatimSearch, search);
+  log("nominatim", results.length);
   if (results.length) return results;
 
   // 2) Fuzzy search on the full text
   results = await attempt(photonSearch, search);
+  log("photon", results.length);
   if (results.length) return dedupe(results).slice(0, 5).map((r) => ({ ...r, approx: true }));
 
   // 3) Fuzzy search on shortened text
@@ -323,6 +342,7 @@ export async function geocode(query) {
 
   // 4) "Did you mean": try other spellings and rank by how similar they look and sound
   results = await attempt(didYouMean, search);
+  log("did-you-mean", results.length);
   if (results.length) return results;
 
   // Nothing found anywhere. If every service failed, report that; otherwise it is a genuine "no match".
