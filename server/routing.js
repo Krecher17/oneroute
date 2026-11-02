@@ -4,6 +4,7 @@
 
 const OSRM_URL = "https://router.project-osrm.org/route/v1/driving";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const PHOTON_URL = "https://photon.komoot.io/api/"; // typo-tolerant search on OpenStreetMap data
 
 // Approximate geographic bounds of India.
 const INDIA_BOUNDS = {
@@ -128,16 +129,10 @@ export async function fetchRouteWithSteps(start, end) {
   return requestOsrmRoute(start, end);
 }
 
-/**
- * Search for places in India only.
- * Returns { lat, lon, label } objects for the frontend.
- */
-export async function geocode(query) {
-  const search = String(query || "").trim();
-  if (!search) {
-    throw new Error("Enter a place name to search.");
-  }
+const USER_AGENT = "ONEROUTE-ConvoyApp/1.0";
 
+// Exact-ish search. Nominatim is accurate but strict about spelling.
+async function nominatimSearch(search) {
   const url = new URL(NOMINATIM_URL);
   url.searchParams.set("q", search);
   url.searchParams.set("format", "jsonv2");
@@ -146,31 +141,114 @@ export async function geocode(query) {
   url.searchParams.set("addressdetails", "1");
 
   const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "ONEROUTE-ConvoyApp/1.0",
-    },
+    headers: { Accept: "application/json", "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(15000),
   });
-
-  if (!response.ok) {
-    throw new Error(`Place search returned HTTP ${response.status}.`);
-  }
+  if (!response.ok) throw new Error(`Place search returned HTTP ${response.status}.`);
 
   const results = await response.json();
-  if (!Array.isArray(results)) {
-    throw new Error("Place search returned an invalid response.");
-  }
+  if (!Array.isArray(results)) throw new Error("Place search returned an invalid response.");
 
   return results
     .filter((place) => {
       const countryCode = String(place.address?.country_code || "").toLowerCase();
-      const lon = Number(place.lon);
-      const lat = Number(place.lat);
-      return countryCode === "in" && isValidCoordinate(lon, lat);
+      return countryCode === "in" && isValidCoordinate(Number(place.lon), Number(place.lat));
     })
     .map((place) => ({
       lat: Number(place.lat),
       lon: Number(place.lon),
       label: String(place.display_name || search),
-    }));}
+    }));
+}
+
+// Fuzzy search. Photon tolerates misspellings and partial names, limited to India's bounding box.
+async function photonSearch(search) {
+  const url = new URL(PHOTON_URL);
+  url.searchParams.set("q", search);
+  url.searchParams.set("limit", "8");
+  url.searchParams.set(
+    "bbox",
+    `${INDIA_BOUNDS.minLon},${INDIA_BOUNDS.minLat},${INDIA_BOUNDS.maxLon},${INDIA_BOUNDS.maxLat}`
+  );
+
+  const response = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error(`Fuzzy place search returned HTTP ${response.status}.`);
+
+  const data = await response.json();
+  const features = Array.isArray(data.features) ? data.features : [];
+
+  return features
+    .filter((f) => String(f.properties?.countrycode || "").toUpperCase() === "IN")
+    .map((f) => {
+      const p = f.properties || {};
+      const [lon, lat] = (f.geometry?.coordinates || []).map(Number);
+      const parts = [p.name, p.street, p.district, p.city, p.state].filter(Boolean);
+      const label = [...new Set(parts)].join(", ") || search;
+      return { lat, lon, label };
+    })
+    .filter((r) => isValidCoordinate(r.lon, r.lat));
+}
+
+// "mysore palce road" -> ["mysore palce road", "mysore palce"], so a bad last word still finds the area.
+function shorterQueries(search) {
+  const words = search.split(/\s+/);
+  const out = [];
+  for (let drop = 1; drop <= 2 && words.length - drop >= 1; drop++) {
+    out.push(words.slice(0, words.length - drop).join(" "));
+  }
+  return out;
+}
+
+function dedupe(results) {
+  const seen = new Set();
+  return results.filter((r) => {
+    const key = `${r.lat.toFixed(3)},${r.lon.toFixed(3)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Search for places in India only. Always tries to return the closest match.
+ * 1) Nominatim (exact), 2) Photon (typo-tolerant), 3) Photon with trailing words dropped.
+ * Returns { lat, lon, label, approx? } objects for the frontend.
+ * "approx: true" means it is a best guess, not an exact match.
+ */
+export async function geocode(query) {
+  const search = String(query || "").trim().replace(/\s+/g, " ");
+  if (!search) {
+    throw new Error("Enter a place name to search.");
+  }
+
+  let firstError = null;
+  const attempt = async (fn, text) => {
+    try {
+      return await fn(text);
+    } catch (error) {
+      firstError = firstError || error; // remember it, but keep trying other methods
+      return [];
+    }
+  };
+
+  // 1) Exact search
+  let results = await attempt(nominatimSearch, search);
+  if (results.length) return results;
+
+  // 2) Fuzzy search on the full text
+  results = await attempt(photonSearch, search);
+  if (results.length) return dedupe(results).slice(0, 5).map((r) => ({ ...r, approx: true }));
+
+  // 3) Fuzzy search on shortened text
+  for (const shorter of shorterQueries(search)) {
+    results = await attempt(photonSearch, shorter);
+    if (results.length) return dedupe(results).slice(0, 5).map((r) => ({ ...r, approx: true }));
+  }
+
+  // Nothing found anywhere. If every service failed, report that; otherwise it is a genuine "no match".
+  if (firstError) throw firstError;
+  return [];
+}
