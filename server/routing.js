@@ -162,10 +162,10 @@ async function nominatimSearch(search) {
 }
 
 // Fuzzy search. Photon tolerates misspellings and partial names, limited to India's bounding box.
-async function photonSearch(search) {
+async function photonSearch(search, limit = 8) {
   const url = new URL(PHOTON_URL);
   url.searchParams.set("q", search);
-  url.searchParams.set("limit", "8");
+  url.searchParams.set("limit", String(limit));
   url.searchParams.set(
     "bbox",
     `${INDIA_BOUNDS.minLon},${INDIA_BOUNDS.minLat},${INDIA_BOUNDS.maxLon},${INDIA_BOUNDS.maxLat}`
@@ -202,6 +202,78 @@ function shorterQueries(search) {
   return out;
 }
 
+// ---- "Did you mean" helpers ----
+// Skeleton: lowercase, no accents, no vowels, no repeated letters. "Ambalpuzha" and "Ambalappuzha" both become "mblpzh".
+function skeleton(text) {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "")
+    .replace(/w/g, "v")
+    .replace(/h/g, "")
+    .replace(/[aeiouy]/g, "")
+    .replace(/(.)\1+/g, "$1");
+}
+
+function editDistance(a, b) {
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const temp = prev[j];
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diagonal = temp;
+    }
+  }
+  return prev[b.length];
+}
+
+// 0..1, higher means the place name looks or sounds more like what the user typed.
+function similarity(query, placeName) {
+  const q = query.toLowerCase().replace(/[^a-z]/g, "");
+  const n = String(placeName || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (!q || !n) return 0;
+  const plain = 1 - editDistance(q, n) / Math.max(q.length, n.length);
+  const qs = skeleton(query);
+  const ns = skeleton(placeName);
+  const sound = qs && ns ? 1 - editDistance(qs, ns) / Math.max(qs.length, ns.length) : 0;
+  return Math.max(plain, sound * 0.95);
+}
+
+// Other spellings worth trying: shorter beginnings, and a missing "a" inside consonant clusters.
+function spellingVariants(word) {
+  const w = word.toLowerCase();
+  const out = new Set();
+  for (let cut = 1; cut <= 4 && w.length - cut >= 4; cut++) out.add(w.slice(0, w.length - cut));
+  let added = 0;
+  for (let i = 1; i < w.length - 1 && added < 4; i++) {
+    const isCons = (c) => /[bcdfgjklmnpqrstvwxz]/.test(c);
+    const digraph = w[i + 1] === "h"; // sh, th, zh, kh... are one sound, do not split
+    if (isCons(w[i]) && isCons(w[i + 1]) && !digraph && !(w[i] === "n" && "gk".includes(w[i + 1]))) {
+      out.add(w.slice(0, i + 1) + "a" + w.slice(i + 1));
+      added++;
+    }
+  }
+  return [...out];
+}
+
+// Collects candidates for several spellings at once, then keeps the ones that look most like the query.
+async function didYouMean(search) {
+  const lastWord = search.split(/\s+/).pop();
+  const prefix = search.slice(0, search.length - lastWord.length);
+  const variants = spellingVariants(lastWord).map((v) => prefix + v);
+  const settled = await Promise.allSettled(variants.map((v) => photonSearch(v, 15)));
+  const pool = dedupe(settled.flatMap((r) => (r.status === "fulfilled" ? r.value : [])));
+  return pool
+    .map((r) => ({ ...r, score: similarity(lastWord, r.label.split(",")[0]) }))
+    .filter((r) => r.score >= 0.5)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ score, ...r }) => ({ ...r, approx: true }));
+}
+
 function dedupe(results) {
   const seen = new Set();
   return results.filter((r) => {
@@ -214,7 +286,8 @@ function dedupe(results) {
 
 /**
  * Search for places in India only. Always tries to return the closest match.
- * 1) Nominatim (exact), 2) Photon (typo-tolerant), 3) Photon with trailing words dropped.
+ * 1) Nominatim (exact), 2) Photon (typo-tolerant), 3) Photon with trailing words dropped,
+ * 4) "did you mean": other spellings, ranked by similarity to what was typed.
  * Returns { lat, lon, label, approx? } objects for the frontend.
  * "approx: true" means it is a best guess, not an exact match.
  */
@@ -247,6 +320,10 @@ export async function geocode(query) {
     results = await attempt(photonSearch, shorter);
     if (results.length) return dedupe(results).slice(0, 5).map((r) => ({ ...r, approx: true }));
   }
+
+  // 4) "Did you mean": try other spellings and rank by how similar they look and sound
+  results = await attempt(didYouMean, search);
+  if (results.length) return results;
 
   // Nothing found anywhere. If every service failed, report that; otherwise it is a genuine "no match".
   if (firstError) throw firstError;
