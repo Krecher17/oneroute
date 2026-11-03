@@ -11,7 +11,6 @@
   "keywords": [],
   "type": "module",
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
     "@turf/turf": "^7.4.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
