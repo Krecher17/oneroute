@@ -1,11 +1,17 @@
 // auth.js
-// ONEROUTE accounts — backed by Supabase Auth + public.profiles table.
-// All existing API routes (/api/signup, /api/login, /api/me, /api/logout,
-// /api/avatar, /api/account/delete, /api/google, /api/config) are preserved.
+// ONEROUTE accounts, stored locally on the server (no external database).
+// Accounts and sessions live in data/accounts.json, avatars in data/avatars/.
+// All routes are unchanged: /api/signup, /api/login, /api/me, /api/logout,
+// /api/avatar, /api/account/delete, /api/google, /api/config, /avatar/:file
 
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
-import { supabase } from './supabase.js';
+import { promisify } from 'util';
+import { fileURLToPath } from 'url';
+
+const scrypt = promisify(crypto.scrypt);
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -13,32 +19,94 @@ const TERMS_VERSION = '2026-10-25';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_AVATAR_BYTES = 120 * 1024;
 const MAX_USERS = 5000;
+const SESSION_MS = 30 * 24 * 60 * 60 * 1000; // stay signed in for 30 days
 
 const cleanEmail = (v) => String(v || '').trim().toLowerCase().slice(0, 254);
 
-/** Shape sent to the browser — never include hash / salt */
-function publicUser(supaUser, profile) {
+// ─── storage (JSON file, written atomically) ────────────────────────────────
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(HERE, 'data');
+const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
+const AVATAR_DIR = path.join(DATA_DIR, 'avatars');
+
+let db = { users: {}, sessions: {} };
+
+function loadDb() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
+    db = { users: parsed.users || {}, sessions: parsed.sessions || {} };
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.error('accounts file could not be read, starting empty:', err.message);
+  }
+  pruneSessions();
+}
+
+function saveDb() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmp = `${ACCOUNTS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(db), { mode: 0o600 });
+    fs.renameSync(tmp, ACCOUNTS_FILE);
+  } catch (err) {
+    console.error('could not save accounts:', err.message);
+    throw err;
+  }
+}
+
+function pruneSessions() {
+  const now = Date.now();
+  for (const [k, s] of Object.entries(db.sessions)) if (!(s.exp > now)) delete db.sessions[k];
+}
+
+loadDb();
+
+const userCount = () => Object.keys(db.users).length;
+const findByEmail = (email) => Object.values(db.users).find((u) => u.email === email) || null;
+const findByGoogleSub = (sub) => Object.values(db.users).find((u) => u.googleSub && u.googleSub === sub) || null;
+const avatarUrl = (user) => (user?.avatarFile ? `/avatar/${user.avatarFile}` : null);
+
+/** Shape sent to the browser, never includes the password hash */
+function publicUser(user) {
   return {
-    id:          supaUser.id,
-    email:       supaUser.email,
-    name:        profile?.name  || supaUser.user_metadata?.name || supaUser.email?.split('@')[0] || 'Driver',
-    avatar:      profile?.avatar_url || null,
-    hasPassword: !!(supaUser.user_metadata?.has_password),
+    id:          user.id,
+    email:       user.email,
+    name:        user.name || user.email?.split('@')[0] || 'Driver',
+    avatar:      avatarUrl(user),
+    hasPassword: !!user.passwordHash,
   };
 }
 
-/** Load the profile row for a user id */
-async function getProfile(userId) {
-  const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-  return data || null;
+// ─── passwords and sessions ─────────────────────────────────────────────────
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const hash = await scrypt(password, salt, 64);
+  return `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`;
 }
 
-/** Upsert a profile row (safe to call multiple times) */
-async function upsertProfile(userId, fields) {
-  const { error } = await supabase
-    .from('profiles')
-    .upsert({ id: userId, ...fields }, { onConflict: 'id' });
-  if (error) throw error;
+const DUMMY_HASH = `scrypt$${'00'.repeat(16)}$${'00'.repeat(64)}`;
+
+async function verifyPassword(password, stored) {
+  const parts = String(stored || DUMMY_HASH).split('$');
+  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+  const expected = Buffer.from(parts[2], 'hex');
+  const actual = await scrypt(password, Buffer.from(parts[1], 'hex'), expected.length);
+  return crypto.timingSafeEqual(actual, expected) && !!stored;
+}
+
+const tokenKey = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+function createSession(userId) {
+  pruneSessions();
+  const token = crypto.randomBytes(32).toString('hex');
+  db.sessions[tokenKey(token)] = { userId, exp: Date.now() + SESSION_MS };
+  saveDb();
+  return token;
+}
+
+function dropSessionsOf(userId) {
+  for (const [k, s] of Object.entries(db.sessions)) if (s.userId === userId) delete db.sessions[k];
 }
 
 // ─── brute-force protection (in-memory, same as before) ─────────────────────
@@ -78,20 +146,13 @@ export function ipLimiter(req, res, next) {
 
 // ─── token resolution ────────────────────────────────────────────────────────
 
-/**
- * Resolve a bearer token → public user object, or null.
- * Supabase JWTs are validated by the library internally.
- */
+/** Resolve a bearer token → public user object, or null. */
 export async function authUserFromToken(token) {
   if (typeof token !== 'string' || token.length < 20 || token.length > 4000) return null;
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) return null;
-    const profile = await getProfile(data.user.id);
-    return publicUser(data.user, profile);
-  } catch {
-    return null;
-  }
+  const session = db.sessions[tokenKey(token)];
+  if (!session || !(session.exp > Date.now())) return null;
+  const user = db.users[session.userId];
+  return user ? publicUser(user) : null;
 }
 
 const bearer = (req) => {
@@ -106,35 +167,21 @@ export async function requireAuth(req, res, next) {
   next();
 }
 
-// ─── avatar helpers (now stored in Supabase Storage) ────────────────────────
+// ─── avatar helpers (files in data/avatars) ─────────────────────────────────
 
-const BUCKET = 'avatars';
-
-async function ensureBucket() {
-  const { data: list } = await supabase.storage.listBuckets();
-  if (!list?.find((b) => b.name === BUCKET)) {
-    await supabase.storage.createBucket(BUCKET, { public: true, fileSizeLimit: MAX_AVATAR_BYTES });
-  }
-}
-ensureBucket().catch((e) => console.warn('avatar bucket check failed:', e.message));
-
-async function uploadAvatar(userId, jpegBuffer) {
-  const path = `${userId}/${crypto.randomBytes(8).toString('hex')}.jpg`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, jpegBuffer, {
-    contentType: 'image/jpeg',
-    upsert: false,
-  });
-  if (error) throw error;
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return { path, url: data.publicUrl };
+function saveAvatarFile(jpegBuffer) {
+  fs.mkdirSync(AVATAR_DIR, { recursive: true });
+  const file = `${crypto.randomBytes(16).toString('hex')}.jpg`;
+  fs.writeFileSync(path.join(AVATAR_DIR, file), jpegBuffer);
+  return file;
 }
 
-async function removeAvatar(storagePath) {
-  if (!storagePath) return;
-  await supabase.storage.from(BUCKET).remove([storagePath]).catch(() => {});
+function removeAvatarFile(file) {
+  if (!file || !/^[a-f0-9]{32}\.jpg$/.test(file)) return;
+  try { fs.unlinkSync(path.join(AVATAR_DIR, file)); } catch { /* already gone */ }
 }
 
-// ─── Google sign-in (keep existing logic) ───────────────────────────────────
+// ─── Google sign-in ─────────────────────────────────────────────────────────
 
 let CONFIG = { googleClientId: String(process.env.GOOGLE_CLIENT_ID || '').trim() };
 
@@ -179,14 +226,14 @@ export async function verifyGoogleIdToken(idToken, clientId, getCerts = fetchGoo
 }
 
 export function authStatus() {
-  return `Accounts: stored in Supabase (${process.env.SUPABASE_URL}) | Google sign-in: ${CONFIG.googleClientId ? 'ON' : 'off'}`;
+  return `Accounts: stored locally (${ACCOUNTS_FILE}) | Google sign-in: ${CONFIG.googleClientId ? 'ON' : 'off'}`;
 }
 
 // ─── avatarForUser (used by index.js when someone joins a trip) ──────────────
+// Synchronous on purpose: index.js uses the result directly.
 
-export async function avatarForUser(userId) {
-  const profile = await getProfile(userId);
-  return profile?.avatar_url || null;
+export function avatarForUser(userId) {
+  return avatarUrl(db.users[userId]);
 }
 
 // ─── route registration ──────────────────────────────────────────────────────
@@ -212,37 +259,28 @@ export function registerAuthRoutes(app, hooks = {}) {
       if (password.length < 8)            return res.status(400).json({ error: 'Use a password with at least 8 characters.' });
       if (password.length > 128)          return res.status(400).json({ error: 'That password is too long (128 characters max).' });
 
-      // Check user count
-      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-      if ((count || 0) >= MAX_USERS) return res.status(503).json({ error: 'Sign-ups are closed right now.' });
+      if (userCount() >= MAX_USERS) return res.status(503).json({ error: 'Sign-ups are closed right now.' });
+      if (findByEmail(email)) return res.status(409).json({ error: 'An account with this email already exists. Try signing in.' });
 
-      const { data, error } = await supabase.auth.admin.createUser({
+      const passwordHash = await hashPassword(password);
+      if (findByEmail(email)) return res.status(409).json({ error: 'An account with this email already exists. Try signing in.' });
+
+      const user = {
+        id:           crypto.randomUUID(),
         email,
-        password,
-        email_confirm: true,
-        user_metadata: { name, has_password: true },
-      });
-
-      if (error) {
-        if (error.message?.toLowerCase().includes('already')) {
-          return res.status(409).json({ error: 'An account with this email already exists. Try signing in.' });
-        }
-        throw error;
-      }
-
-      await upsertProfile(data.user.id, {
         name,
-        terms_version: TERMS_VERSION,
-        terms_at:      new Date().toISOString(),
-      });
+        passwordHash,
+        googleSub:    null,
+        avatarFile:   null,
+        termsVersion: TERMS_VERSION,
+        termsAt:      new Date().toISOString(),
+        createdAt:    new Date().toISOString(),
+      };
+      db.users[user.id] = user;
+      const token = createSession(user.id);
 
-      // Sign in to get a token
-      const { data: signIn, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInErr) throw signInErr;
-
-      const profile = await getProfile(data.user.id);
       console.log('account created');
-      res.status(201).json({ token: signIn.session.access_token, user: publicUser(data.user, profile) });
+      res.status(201).json({ token, user: publicUser(user) });
     } catch (err) {
       console.error('signup failed:', err);
       res.status(500).json({ error: 'Could not create the account. Try again.' });
@@ -258,15 +296,15 @@ export function registerAuthRoutes(app, hooks = {}) {
 
       if (tooManyAttempts(key)) return res.status(429).json({ error: 'Too many wrong attempts. Wait a few minutes and try again.' });
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
+      const user = findByEmail(email);
+      const ok = await verifyPassword(password, user?.passwordHash); // runs a dummy check when there is no such user
+      if (!user || !ok) {
         recordFailure(key);
         return res.status(401).json({ error: 'Wrong email or password.' });
       }
 
       attempts.delete(key);
-      const profile = await getProfile(data.user.id);
-      res.json({ token: data.session.access_token, user: publicUser(data.user, profile) });
+      res.json({ token: createSession(user.id), user: publicUser(user) });
     } catch (err) {
       console.error('login failed:', err);
       res.status(500).json({ error: 'Could not sign in. Try again.' });
@@ -292,71 +330,51 @@ export function registerAuthRoutes(app, hooks = {}) {
         return res.status(401).json({ error: 'Google sign-in could not be verified. Try again.' });
       }
 
-      const email = cleanEmail(claims.email);
+      const email    = cleanEmail(claims.email);
+      const existing = findByGoogleSub(claims.sub) || findByEmail(email);
 
-      // Look up existing user by google_sub or email
-      let { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id, google_sub')
-        .or(`google_sub.eq.${claims.sub},id.eq.${email}`)
-        .maybeSingle();
-
-      // Also try finding by email in auth.users
-      const { data: userList } = await supabase.auth.admin.listUsers();
-      const existingAuthUser = userList?.users?.find((u) => u.email === email);
-
-      if (!existingAuthUser) {
-        // New user — require consent
+      if (!existing) {
+        // New user: consent is required first
         if (req.body?.acceptTerms !== true) {
           return res.status(409).json({ needConsent: true, name: String(claims.given_name || claims.name || '').slice(0, 20) });
         }
-
-        const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        if ((count || 0) >= MAX_USERS) return res.status(503).json({ error: 'Sign-ups are closed right now.' });
+        if (userCount() >= MAX_USERS) return res.status(503).json({ error: 'Sign-ups are closed right now.' });
 
         const name = String(claims.name || claims.given_name || email.split('@')[0]).trim().replace(/\s+/g, ' ').slice(0, 20) || 'Driver';
-        const { data, error } = await supabase.auth.admin.createUser({
+        const user = {
+          id:           crypto.randomUUID(),
           email,
-          email_confirm: true,
-          user_metadata: { name, google_sub: claims.sub, has_password: false },
-        });
-        if (error) throw error;
-
-        await upsertProfile(data.user.id, {
           name,
-          google_sub:    claims.sub,
-          terms_version: TERMS_VERSION,
-          terms_at:      new Date().toISOString(),
-        });
-
-        // Issue a session via admin (password-less Google user)
-        const { data: session } = await supabase.auth.admin.generateLink({ type: 'magiclink', email });
-        // Use admin token approach
-        const { data: signInData } = await supabase.auth.admin.createSession({ userId: data.user.id });
-        const profile = await getProfile(data.user.id);
+          passwordHash: null,
+          googleSub:    claims.sub,
+          avatarFile:   null,
+          termsVersion: TERMS_VERSION,
+          termsAt:      new Date().toISOString(),
+          createdAt:    new Date().toISOString(),
+        };
+        db.users[user.id] = user;
+        const token = createSession(user.id);
         console.log('account created (google)');
-        return res.status(201).json({ token: signInData.session.access_token, user: publicUser(data.user, profile) });
+        return res.status(201).json({ token, user: publicUser(user) });
       }
 
-      // Existing user — link google_sub if not yet linked
-      const profile = await getProfile(existingAuthUser.id);
-      if (!profile?.google_sub) {
-        await upsertProfile(existingAuthUser.id, { google_sub: claims.sub });
-      } else if (profile.google_sub !== claims.sub) {
+      // Existing user: link the Google account if it is not linked yet
+      if (!existing.googleSub) {
+        existing.googleSub = claims.sub;
+      } else if (existing.googleSub !== claims.sub) {
         return res.status(401).json({ error: 'This email belongs to a different Google account.' });
       }
 
-      const { data: signInData } = await supabase.auth.admin.createSession({ userId: existingAuthUser.id });
-      const updatedProfile = await getProfile(existingAuthUser.id);
+      const token = createSession(existing.id); // also saves the link above
       console.log('google sign-in');
-      res.json({ token: signInData.session.access_token, user: publicUser(existingAuthUser, updatedProfile) });
+      res.json({ token, user: publicUser(existing) });
     } catch (err) {
       console.error('google sign-in failed:', err);
       res.status(500).json({ error: 'Could not sign in with Google. Try again.' });
     }
   });
 
-  // ── /api/avatar  (PUT — upload) ──
+  // ── /api/avatar  (PUT: upload) ──
   const rawJpeg = (req, res, next) =>
     express.raw({ type: 'image/jpeg', limit: MAX_AVATAR_BYTES })(req, res, (err) => {
       if (err) return res.status(413).json({ error: 'That photo is too large. Try a smaller one.' });
@@ -369,16 +387,16 @@ export function registerAuthRoutes(app, hooks = {}) {
       const isJpeg = Buffer.isBuffer(body) && body.length > 200 && body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff;
       if (!isJpeg) return res.status(400).json({ error: 'Choose a JPEG, PNG or WebP photo.' });
 
-      const profile = await getProfile(req.user.id);
+      const user = db.users[req.user.id];
+      if (!user) return res.status(401).json({ error: 'Please sign in first.' });
 
-      // Delete old avatar from storage
-      if (profile?.avatar_path) await removeAvatar(profile.avatar_path);
+      const newFile = saveAvatarFile(body);
+      const oldFile = user.avatarFile;
+      user.avatarFile = newFile;
+      saveDb();
+      removeAvatarFile(oldFile);
 
-      const { path: storagePath, url } = await uploadAvatar(req.user.id, body);
-      await upsertProfile(req.user.id, { avatar_url: url, avatar_path: storagePath });
-
-      const updatedUser = { ...req.user, avatar: url };
-      res.json({ user: updatedUser });
+      res.json({ user: { ...req.user, avatar: avatarUrl(user) } });
     } catch (err) {
       console.error('avatar upload failed:', err);
       res.status(500).json({ error: 'Could not save your photo. Try again.' });
@@ -387,9 +405,13 @@ export function registerAuthRoutes(app, hooks = {}) {
 
   app.delete('/api/avatar', requireAuth, async (req, res) => {
     try {
-      const profile = await getProfile(req.user.id);
-      if (profile?.avatar_path) await removeAvatar(profile.avatar_path);
-      await upsertProfile(req.user.id, { avatar_url: null, avatar_path: null });
+      const user = db.users[req.user.id];
+      if (user) {
+        const oldFile = user.avatarFile;
+        user.avatarFile = null;
+        saveDb();
+        removeAvatarFile(oldFile);
+      }
       res.json({ user: { ...req.user, avatar: null } });
     } catch (err) {
       console.error('avatar delete failed:', err);
@@ -397,9 +419,14 @@ export function registerAuthRoutes(app, hooks = {}) {
     }
   });
 
-  // Avatars are now public URLs from Supabase Storage — no /avatar/:file route needed.
-  // Keep a stub so old cached links don't 500.
-  app.get('/avatar/:file', (_req, res) => res.status(410).end());
+  // ── /avatar/:file  (serves saved profile pictures) ──
+  app.get('/avatar/:file', (req, res) => {
+    if (!/^[a-f0-9]{32}\.jpg$/.test(req.params.file)) return res.status(404).end();
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.sendFile(req.params.file, { root: AVATAR_DIR, dotfiles: 'deny' }, (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
 
   // ── /api/account/delete ──
   app.post('/api/account/delete', requireAuth, ipLimiter, async (req, res) => {
@@ -407,31 +434,25 @@ export function registerAuthRoutes(app, hooks = {}) {
       const key = attemptKey(req, req.user.email);
       if (tooManyAttempts(key)) return res.status(429).json({ error: 'Too many wrong attempts. Wait a few minutes and try again.' });
 
-      const typed    = String(req.body?.password || '').slice(0, 128);
-      const hasPass  = req.user.hasPassword;
+      const user  = db.users[req.user.id];
+      const typed = String(req.body?.password || '').slice(0, 128);
+      if (!user) return res.status(401).json({ error: 'Please sign in first.' });
 
-      if (hasPass) {
-        // Verify current password
-        const { error } = await supabase.auth.signInWithPassword({ email: req.user.email, password: typed });
-        if (error) {
+      if (user.passwordHash) {
+        if (!(await verifyPassword(typed, user.passwordHash))) {
           recordFailure(key);
           return res.status(401).json({ error: 'That password is not right.' });
         }
-      } else {
+      } else if (typed !== 'DELETE') {
         // Google-only account: type DELETE
-        if (typed !== 'DELETE') {
-          recordFailure(key);
-          return res.status(401).json({ error: 'Type DELETE to confirm.' });
-        }
+        recordFailure(key);
+        return res.status(401).json({ error: 'Type DELETE to confirm.' });
       }
 
-      // Remove avatar
-      const profile = await getProfile(req.user.id);
-      if (profile?.avatar_path) await removeAvatar(profile.avatar_path);
-
-      // Delete from Supabase Auth (cascades to profiles via FK)
-      const { error: delErr } = await supabase.auth.admin.deleteUser(req.user.id);
-      if (delErr) throw delErr;
+      removeAvatarFile(user.avatarFile);
+      dropSessionsOf(user.id);
+      delete db.users[user.id];
+      saveDb();
 
       if (typeof hooks.onAccountDeleted === 'function') hooks.onAccountDeleted(req.user.id);
       console.log('account deleted');
@@ -443,10 +464,13 @@ export function registerAuthRoutes(app, hooks = {}) {
   });
 
   // ── /api/logout ──
-  app.post('/api/logout', async (req, res) => {
+  app.post('/api/logout', (req, res) => {
     try {
       const token = bearer(req);
-      if (token) await supabase.auth.admin.signOut(token).catch(() => {});
+      if (token && db.sessions[tokenKey(token)]) {
+        delete db.sessions[tokenKey(token)];
+        saveDb();
+      }
     } catch { /* not critical */ }
     res.json({ ok: true });
   });
