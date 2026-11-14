@@ -15,6 +15,9 @@ type Dict = Record<string, string>;
 const loaders: Record<string, () => Promise<{ default: Dict }>> = {
   hi: () => import('./locales/legacy/hi.json'),
   ml: () => import('./locales/legacy/ml.json'),
+  ta: () => import('./locales/legacy/ta.json'),
+  kn: () => import('./locales/legacy/kn.json'),
+  te: () => import('./locales/legacy/te.json'),
 };
 const cache = new Map<string, Dict>();
 
