@@ -230,7 +230,7 @@ export async function verifyGoogleIdToken(idToken, clientId, getCerts = fetchGoo
 }
 
 export function authStatus() {
-  return `Accounts: stored locally (${ACCOUNTS_FILE}) | Google sign-in: ${CONFIG.googleClientId ? 'ON' : 'off'}`;
+  return `Accounts: ${usesSupabase ? "stored in Supabase" : "stored locally"} | Google sign-in: ${CONFIG.googleClientId ? 'ON' : 'off'}`;
 }
 
 // ─── avatarForUser (used by index.js when someone joins a trip) ──────────────
