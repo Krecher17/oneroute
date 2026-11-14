@@ -143,6 +143,7 @@ export function startLegacyTranslation(root: HTMLElement): () => void {
   i18n.on('languageChanged', onChange);
 
   return () => {
+    token++;
     observer.disconnect();
     i18n.off('languageChanged', onChange);
     if (scheduled) window.cancelAnimationFrame(scheduled);

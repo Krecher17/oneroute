@@ -29,13 +29,30 @@ export function PwaPrompts() {
   const [installable, setInstallable] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
   const deferred = useRef<InstallPromptEvent | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | undefined>(undefined);
 
   const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({
     onRegisteredSW(_url, registration) {
       // Look for a new version hourly while the app stays open.
-      if (registration) window.setInterval(() => { void registration.update(); }, 60 * 60 * 1000);
+      registrationRef.current = registration;
     },
   });
+
+  useEffect(() => {
+    const checkForUpdate = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        void registrationRef.current?.update().catch(() => {});
+      }
+    };
+    const interval = window.setInterval(checkForUpdate, 60 * 60 * 1000);
+    document.addEventListener('visibilitychange', checkForUpdate);
+    window.addEventListener('online', checkForUpdate);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', checkForUpdate);
+      window.removeEventListener('online', checkForUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const up = () => setOnline(true);

@@ -73,7 +73,11 @@ const staticOptions = {
     }
   },
 };
-app.use(express.static(fileURLToPath(new URL('./web-dist/', import.meta.url)), staticOptions));
+const webDist = fileURLToPath(new URL('./web-dist/', import.meta.url));
+if (process.env.RENDER === 'true' && !fs.existsSync(path.join(webDist, 'index.html'))) {
+  throw new Error('Oneroute frontend build missing. Run npm --prefix client run build in the Render build step.');
+}
+app.use(express.static(webDist, staticOptions));
 app.use(express.static(fileURLToPath(new URL('./public/', import.meta.url)), staticOptions));
 // The map library comes from the npm package (npm install maplibre-gl@4.7.1), so no files need copying by hand.
 app.use('/vendor', express.static(path.resolve('node_modules/maplibre-gl/dist')));

@@ -1286,7 +1286,7 @@ function startSharing(){
     if(!p.__manual){lastRealFixAt=Date.now();if(gpsMode==='manual'){clearInterval(manualTimer);gpsMode=null}}
     lastGps={lat:p.coords.latitude,lon:p.coords.longitude};noteHeading(p);
     if(navPreview){navPreview=false;navLastRouteAt=0;navFetchDirections()} // first real fix: swap the preview for live directions
-    if(navOpen||navDriving||navTrip){navUpdateInstruction();if(Date.now()-navLastRouteAt>120000&&(navRoutingUnavailable||!navRouteSteps.length||navMatchPosition()?.offset>80))navFetchDirections();}if(navOpen){navUpdateMarkers();navFollowCamera()}
+    if(navOpen||navDriving||navTrip){navUpdateInstruction();if(((navRoutingUnavailable||!navRouteSteps.length)?Date.now()>=navRetryAt:Date.now()-navLastRouteAt>120000&&navMatchPosition()?.offset>80))navFetchDirections();}if(navOpen){navUpdateMarkers();navFollowCamera()}
     const speedMps=p.coords.speed;lastSpeedKmh=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):null;
     $('speedValue').textContent=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):'--';
     if(fuelVisible&&Date.now()-lastFuelSearch>30000){lastFuelSearch=Date.now();loadFuelStations(lastGps.lat,lastGps.lon)}

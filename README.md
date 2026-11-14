@@ -225,3 +225,9 @@ npm --prefix server start
 ```
 
 The server serves the built client from `server/web-dist`. Set `TOMTOM_TRAFFIC_API_KEY` in the server environment to enable live traffic.
+
+## Render launch checks
+
+For a Node web service, use root directory `server`, build command `npm ci && npm --prefix client ci --include=dev && npm --prefix client run build`, and start command `npm start`.
+
+Accounts, sessions and avatars are stored under `DATA_DIR`. Before opening registrations, attach durable storage and set `DATA_DIR` to a directory on that mount. Verify that a test account survives a redeploy. Active trips are held in memory and reset when the server restarts.
