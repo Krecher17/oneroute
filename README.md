@@ -212,3 +212,16 @@ This project is protected under a **Restricted Source-Available License**.
 * ❌ **Prohibited:** Commercial use, commercial hosting/SaaS deployments, re-distribution, or creating closed/re-branded derivative works without explicit written permission.
 
 For full terms, see the [LICENSE](LICENSE) file. For licensing or partnership inquiries, contact: **jiya.lenu@gmail.com**.
+
+## Build and run Oneroute
+
+From the checkout, install and build the web client, then start the Node server.
+
+```sh
+npm --prefix server/client ci
+npm --prefix server/client run build
+npm --prefix server ci
+npm --prefix server start
+```
+
+The server serves the built client from `server/web-dist`. Set `TOMTOM_TRAFFIC_API_KEY` in the server environment to enable live traffic.

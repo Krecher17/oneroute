@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     build: {
-      outDir: '../server/public',
+      outDir: '../web-dist',
       emptyOutDir: false, // your terms/privacy pages live there; `prebuild` removes only generated files
       target: 'es2020',
       sourcemap: env.BUILD_SOURCEMAPS === '1' ? 'hidden' : false,

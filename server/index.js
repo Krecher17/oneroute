@@ -13,7 +13,7 @@ import { fetchRoute, fetchRouteWithSteps, geocode } from './routing.js';
 import { bestRejoin } from './rejoin.js';
 import { nearestHelp, getWeather, fetchAlternatives, thin, ttsEnabled, ttsStatus, speakText } from './features.js';
 import { registerAuthRoutes, requireAuth, authUserFromToken, avatarForUser, authStatus } from './auth.js';
-import { registerTrafficRoutes } from './server/traffic.js';
+import { registerTrafficRoutes } from './traffic.js';
 import { initSentry, attachSentry } from './sentry.js';
 
 await initSentry(); // no-op unless SENTRY_DSN is set
@@ -73,7 +73,7 @@ const staticOptions = {
     }
   },
 };
-app.use(express.static(fileURLToPath(new URL('./server/public/', import.meta.url)), staticOptions));
+app.use(express.static(fileURLToPath(new URL('./web-dist/', import.meta.url)), staticOptions));
 app.use(express.static(fileURLToPath(new URL('./public/', import.meta.url)), staticOptions));
 // The map library comes from the npm package (npm install maplibre-gl@4.7.1), so no files need copying by hand.
 app.use('/vendor', express.static(path.resolve('node_modules/maplibre-gl/dist')));

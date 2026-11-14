@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../server/public');
+const out = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web-dist');
 if (!fs.existsSync(out)) { console.log('clean-build: nothing to clean (server/public does not exist yet)'); process.exit(0); }
 
 const removed = [];

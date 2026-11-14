@@ -5,7 +5,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'app.oneroute.convoy',
   appName: 'ONEROUTE',
-  webDir: '../server/public',
+  webDir: '../web-dist',
   server: { androidScheme: 'https' },
   android: { allowMixedContent: false },
   plugins: {

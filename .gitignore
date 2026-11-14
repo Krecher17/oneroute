@@ -51,3 +51,4 @@ Untitled-*
 # Configuration files with secrets
 config.json
 **/config.json
+/server/web-dist/

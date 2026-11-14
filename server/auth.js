@@ -280,7 +280,7 @@ export function registerAuthRoutes(app, hooks = {}) {
       const token = createSession(user.id);
 
       console.log('account created');
-      res.status(201).json({ token, user: publicUser(user) });
+      res.status(201).json({ token, user: publicUser(user), newAccount: true });
     } catch (err) {
       console.error('signup failed:', err);
       res.status(500).json({ error: 'Could not create the account. Try again.' });
@@ -355,7 +355,7 @@ export function registerAuthRoutes(app, hooks = {}) {
         db.users[user.id] = user;
         const token = createSession(user.id);
         console.log('account created (google)');
-        return res.status(201).json({ token, user: publicUser(user) });
+        return res.status(201).json({ token, user: publicUser(user), newAccount: true });
       }
 
       // Existing user: link the Google account if it is not linked yet

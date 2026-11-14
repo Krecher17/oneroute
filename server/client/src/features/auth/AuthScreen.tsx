@@ -198,8 +198,8 @@ export function AuthScreen({ onSignedIn }: { onSignedIn: (newAccount?: boolean) 
           <div className="auth-card" aria-busy={booting || busy}>
             <div className="auth-head">
               <div className="auth-logo" aria-hidden="true">⬡</div>
-              <h1 id="authTitle" key={mode}>{booting ? t('auth.signingIn') : up ? t('auth.titleSignup') : t('auth.titleSignin')}</h1>
-              {!booting && <p id="authSub" key={mode}>{up ? t('auth.subSignup') : t('auth.subSignin')}</p>}
+              <h1 id="authTitle" key={mode + "-title"}>{booting ? t('auth.signingIn') : up ? t('auth.titleSignup') : t('auth.titleSignin')}</h1>
+              {!booting && <p id="authSub" key={mode + "-subtitle"}>{up ? t('auth.subSignup') : t('auth.subSignin')}</p>}
               {invite && <p id="authInvite" className="auth-invite" role="status">{t('auth.invite', { code: invite })}</p>}
             </div>
 
