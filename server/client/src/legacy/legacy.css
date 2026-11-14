@@ -459,7 +459,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 #deleteError{color:#ffaaa5;font-size:13px}
 #deleteError:empty{display:none}
 /* ===== Profile pictures ===== */
-.pin.photo,.nav-pin.photo{background-size:cover;background-position:center;background-repeat:no-repeat;color:transparent;font-size:0;border-color:var(--ring,#fff)}
+.pin.photo,.nav-pin.photo,.nav-mate.photo{background-size:cover;background-position:center;background-repeat:no-repeat;color:transparent;font-size:0;border-color:var(--ring,#fff)}
 .pin.photo{width:40px;height:40px}
 .pin.photo .seen-tag{top:46px;font-size:10px;color:#fff}
 .pin.photo.halted{border-color:var(--orange)}
