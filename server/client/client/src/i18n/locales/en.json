@@ -1,0 +1,124 @@
+{
+  "auth": {
+    "titleSignin": "Welcome back",
+    "subSignin": "Sign in to continue to ONEROUTE",
+    "titleSignup": "Create your account",
+    "subSignup": "Sign up to start or join a convoy",
+    "invite": "You’re invited to trip {{code}}. Sign in or create an account to join.",
+    "photoAdd": "Add a photo (optional)",
+    "photoChange": "Change photo",
+    "photoRemove": "Remove photo",
+    "name": "Your name",
+    "email": "Email address",
+    "password": "Password",
+    "passwordNew": "Password (8+ characters)",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "remember": "Keep me signed in on this device",
+    "consent": "I’m 18 or older and I agree to the <terms>Terms</terms> and the <privacy>Privacy Policy</privacy> (opens in a new tab).",
+    "submitSignin": "Sign in",
+    "submitSignup": "Create account",
+    "or": "or",
+    "googleAgree": "Agree and continue with Google",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don’t have an account?",
+    "toSignup": "Sign up",
+    "toSignin": "Sign in",
+    "note": "You only need to do this once on each device.",
+    "signingIn": "Signing you in…"
+  },
+  "legal": {
+    "aria": "Legal information",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "cookies": "Cookie policy",
+    "refund": "Refund policy"
+  },
+  "err": {
+    "name": "Enter your name.",
+    "email": "Enter a valid email address.",
+    "passwordEmpty": "Enter your password.",
+    "passwordShort": "Use a password with at least 8 characters.",
+    "consent": "Please tick the box to agree to the Terms and Privacy Policy.",
+    "network": "Could not reach the server. Check your connection.",
+    "generic": "Something went wrong. Try again.",
+    "sessionEnded": "Your session ended. Please sign in again.",
+    "serverSlow": "The server is not responding. Check your connection.",
+    "google": "Google sign-in failed. Try again.",
+    "googleConsent": "Almost done{{name}}: tick the box to agree to the Terms and Privacy Policy, then press “Agree and continue with Google”.",
+    "imageType": "Choose an image file.",
+    "imageBig": "That photo is too large (15 MB max).",
+    "imageRead": "Could not read that image.",
+    "imageProcess": "Could not process that image.",
+    "photoSave": "Account created, but the photo was not saved: {{reason}}"
+  },
+  "server": {
+    "wrong_credentials": "Wrong email or password.",
+    "email_exists": "An account with this email already exists. Try signing in.",
+    "too_many_attempts": "Too many wrong attempts. Wait a few minutes and try again.",
+    "signups_closed": "Sign-ups are closed right now.",
+    "unauthorized": "Please sign in first.",
+    "google_unverified": "Google sign-in could not be verified. Try again.",
+    "google_wrong_account": "This email belongs to a different Google account.",
+    "google_not_configured": "Google sign-in is not set up on this server.",
+    "login_failed": "Could not sign in. Try again.",
+    "signup_failed": "Could not create the account. Try again.",
+    "password_long": "That password is too long (128 characters max)."
+  },
+  "pwa": {
+    "install": {
+      "title": "Install ONEROUTE",
+      "body": "Add it to your home screen for quick access and a full-screen view.",
+      "action": "Install",
+      "iosHint": "On iPhone: tap Share, then “Add to Home Screen”.",
+      "later": "Not now"
+    },
+    "update": {
+      "title": "A new version is ready",
+      "body": "Update when it suits you. We won’t reload while you’re driving.",
+      "action": "Update now",
+      "later": "Later"
+    },
+    "offline": {
+      "title": "You’re offline",
+      "body": "Live convoy updates will continue when your connection returns."
+    },
+    "reconnecting": "Reconnecting…"
+  },
+  "driving": {
+    "title": "Driving mode",
+    "exit": "Exit",
+    "nextTurn": "Next turn",
+    "noRoute": "Follow the convoy route",
+    "speedUnit": "km/h",
+    "gpsWaiting": "Waiting for GPS…",
+    "count_one": "{{count}} vehicle",
+    "count_other": "{{count}} vehicles",
+    "allOnRoute": "Everyone is on route",
+    "behind": "{{name}} is {{km}} km behind",
+    "off": "{{name}} is off route",
+    "noSignal": "{{name}} has no signal",
+    "waiting": "Waiting for the convoy…",
+    "sos": "SOS",
+    "sosHold": "Hold to send SOS",
+    "sosHolding": "Keep holding…",
+    "sosActive": "SOS sent. Tap to cancel",
+    "halt": "Halt",
+    "haltActive": "Halted. Tap to move on",
+    "voice": "Voice",
+    "voiceRecording": "Recording… tap to send",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "incomingSos": "{{name}} needs help",
+    "auto": "Turn on automatically when driving",
+    "autoHint": "Starts above {{speed}} km/h.",
+    "tip": "Keep your eyes on the road. Send a voice message instead of typing.",
+    "tripLabel": "Trip {{code}}"
+  },
+  "lang": {
+    "label": "Language"
+  },
+  "search": {
+    "didYouMean": "Did you mean…?"
+  }
+}

@@ -6,12 +6,17 @@ import { Server } from 'socket.io';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 
 import { makeRoute, snap } from './geo.js';
 import { fetchRoute, fetchRouteWithSteps, geocode } from './routing.js';
 import { bestRejoin } from './rejoin.js';
 import { nearestHelp, getWeather, fetchAlternatives, thin, ttsEnabled, ttsStatus, speakText } from './features.js';
 import { registerAuthRoutes, requireAuth, authUserFromToken, avatarForUser, authStatus } from './auth.js';
+import { registerTrafficRoutes } from './server/traffic.js';
+import { initSentry, attachSentry } from './sentry.js';
+
+await initSentry(); // no-op unless SENTRY_DSN is set
 
 // -------------------- Settings --------------------
 const PORT = process.env.PORT || 3001;
@@ -56,9 +61,23 @@ app.use((_req, res, next) => {
 });
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+// Serve the Vite build first. Keep public/ as a fallback for existing static files and unbuilt checkouts.
+// the service worker, manifest and index.html must always be re-checked or updates would never reach people.
+const staticOptions = {
+  setHeaders(res, filePath) {
+    const file = path.basename(filePath);
+    if (/^(sw\.js|registerSW\.js|index\.html|manifest\.webmanifest|workbox-.*\.js)$/.test(file)) {
+      res.set('Cache-Control', 'no-cache');
+    } else if (filePath.split(path.sep).includes('assets')) {
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+};
+app.use(express.static(fileURLToPath(new URL('./server/public/', import.meta.url)), staticOptions));
+app.use(express.static(fileURLToPath(new URL('./public/', import.meta.url)), staticOptions));
 // The map library comes from the npm package (npm install maplibre-gl@4.7.1), so no files need copying by hand.
 app.use('/vendor', express.static(path.resolve('node_modules/maplibre-gl/dist')));
+registerTrafficRoutes(app);
 registerAuthRoutes(app, {
   // a deleted account is disconnected straight away
   onAccountDeleted: (userId) => {
@@ -1367,6 +1386,8 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+attachSentry(app); // after every route, so server errors are reported
 
 server.listen(PORT, () => {
   console.log(`Oneroute server running on port ${PORT}`);

@@ -1,0 +1,233 @@
+{
+  "auth": {
+    "titleSignin": "Welcome back",
+    "subSignin": "Sign in to continue to ONEROUTE",
+    "titleSignup": "Create your account",
+    "subSignup": "Sign up to start or join a convoy",
+    "invite": "You’re invited to trip {{code}}. Sign in or create an account to join.",
+    "photoAdd": "Add a photo (optional)",
+    "photoChange": "Change photo",
+    "photoRemove": "Remove photo",
+    "name": "Your name",
+    "email": "Email address",
+    "password": "Password",
+    "passwordNew": "Password (8+ characters)",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "remember": "Keep me signed in on this device",
+    "consent": "I’m 18 or older and I agree to the <terms>Terms</terms> and the <privacy>Privacy Policy</privacy> (opens in a new tab).",
+    "submitSignin": "Sign in",
+    "submitSignup": "Create account",
+    "or": "or",
+    "googleAgree": "Agree and continue with Google",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don’t have an account?",
+    "toSignup": "Sign up",
+    "toSignin": "Sign in",
+    "note": "You only need to do this once on each device.",
+    "signingIn": "Signing you in…"
+  },
+  "legal": {
+    "aria": "Legal information",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "cookies": "Cookie policy",
+    "refund": "Refund policy"
+  },
+  "err": {
+    "name": "Enter your name.",
+    "email": "Enter a valid email address.",
+    "passwordEmpty": "Enter your password.",
+    "passwordShort": "Use a password with at least 8 characters.",
+    "consent": "Please tick the box to agree to the Terms and Privacy Policy.",
+    "network": "Could not reach the server. Check your connection.",
+    "generic": "Something went wrong. Try again.",
+    "sessionEnded": "Your session ended. Please sign in again.",
+    "serverSlow": "The server is not responding. Check your connection.",
+    "google": "Google sign-in failed. Try again.",
+    "googleConsent": "Almost done{{name}}: tick the box to agree to the Terms and Privacy Policy, then press “Agree and continue with Google”.",
+    "imageType": "Choose an image file.",
+    "imageBig": "That photo is too large (15 MB max).",
+    "imageRead": "Could not read that image.",
+    "imageProcess": "Could not process that image.",
+    "photoSave": "Account created, but the photo was not saved: {{reason}}"
+  },
+  "server": {
+    "wrong_credentials": "Wrong email or password.",
+    "email_exists": "An account with this email already exists. Try signing in.",
+    "too_many_attempts": "Too many wrong attempts. Wait a few minutes and try again.",
+    "signups_closed": "Sign-ups are closed right now.",
+    "unauthorized": "Please sign in first.",
+    "google_unverified": "Google sign-in could not be verified. Try again.",
+    "google_wrong_account": "This email belongs to a different Google account.",
+    "google_not_configured": "Google sign-in is not set up on this server.",
+    "login_failed": "Could not sign in. Try again.",
+    "signup_failed": "Could not create the account. Try again.",
+    "password_long": "That password is too long (128 characters max)."
+  },
+  "pwa": {
+    "install": {
+      "title": "Install ONEROUTE",
+      "body": "Add it to your home screen for quick access and a full-screen view.",
+      "action": "Install",
+      "iosHint": "On iPhone: tap Share, then “Add to Home Screen”.",
+      "later": "Not now"
+    },
+    "update": {
+      "title": "A new version is ready",
+      "body": "Update when it suits you. We won’t reload while you’re driving.",
+      "action": "Update now",
+      "later": "Later"
+    },
+    "offline": {
+      "title": "You’re offline",
+      "body": "Live convoy updates will continue when your connection returns."
+    },
+    "reconnecting": "Reconnecting…"
+  },
+  "driving": {
+    "title": "Driving mode",
+    "exit": "Exit",
+    "nextTurn": "Next turn",
+    "noRoute": "Follow the convoy route",
+    "speedUnit": "km/h",
+    "gpsWaiting": "Waiting for GPS…",
+    "count_one": "{{count}} vehicle",
+    "count_other": "{{count}} vehicles",
+    "allOnRoute": "Everyone is on route",
+    "behind": "{{name}} is {{km}} km behind",
+    "off": "{{name}} is off route",
+    "noSignal": "{{name}} has no signal",
+    "waiting": "Waiting for the convoy…",
+    "sos": "SOS",
+    "sosHold": "Hold to send SOS",
+    "sosHolding": "Keep holding…",
+    "sosActive": "SOS sent. Tap to cancel",
+    "halt": "Halt",
+    "haltActive": "Halted. Tap to move on",
+    "voice": "Voice",
+    "voiceRecording": "Recording… tap to send",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "incomingSos": "{{name}} needs help",
+    "auto": "Turn on automatically when driving",
+    "autoHint": "Starts above {{speed}} km/h.",
+    "tip": "Keep your eyes on the road. Send a voice message instead of typing.",
+    "tripLabel": "Trip {{code}}"
+  },
+  "lang": {
+    "label": "Language"
+  },
+  "search": {
+    "didYouMean": "Did you mean…?"
+  },
+  "nav": {
+    "unit": {
+      "m": "m",
+      "km": "km"
+    },
+    "dir": {
+      "left": "left",
+      "right": "right",
+      "slightLeft": "slightly left",
+      "slightRight": "slightly right",
+      "sharpLeft": "sharp left",
+      "sharpRight": "sharp right",
+      "straight": "straight",
+      "ahead": "ahead"
+    },
+    "ord": {
+      "1": "first",
+      "2": "second",
+      "3": "third",
+      "4": "fourth",
+      "5": "fifth",
+      "6": "sixth",
+      "7": "seventh",
+      "8": "eighth"
+    },
+    "depart": "Start driving",
+    "arrive": "You have arrived",
+    "roundabout": "Enter the roundabout",
+    "roundaboutDir": "Enter the roundabout and go {{dir}}",
+    "merge": "Merge",
+    "mergeDir": "Merge {{dir}}",
+    "fork": "Keep {{dir}}",
+    "endOfRoad": "At the end of the road, turn {{dir}}",
+    "turn": "Turn {{dir}}",
+    "uturn": "Make a U-turn",
+    "continue": "Continue straight",
+    "spoken": {
+      "arrive": "you will arrive at your destination",
+      "uturn": "make a U-turn",
+      "roundaboutExit": "take the {{ord}} exit at the roundabout",
+      "roundabout": "enter the roundabout",
+      "merge": "merge",
+      "mergeDir": "merge {{dir}}",
+      "fork": "keep {{dir}} at the fork",
+      "ramp": "take the ramp",
+      "rampDir": "take the ramp on the {{dir}}",
+      "endOfRoad": "turn {{dir}} at the end of the road",
+      "keepDir": "keep {{dir}}",
+      "continue": "continue straight",
+      "turnDir": "turn {{dir}}",
+      "km_one": "{{count}} kilometre",
+      "km_other": "{{count}} kilometres",
+      "far": "Continue straight for {{distance}}.",
+      "arrived": "You have arrived.",
+      "now": "{{action}} now.",
+      "inMetres": "In {{d}} metres, {{action}}.",
+      "destIn": "Your destination is in {{d}} metres.",
+      "missed": "You have missed your turn. Finding a route to rejoin."
+    },
+    "recenter": "Recenter"
+  },
+  "gps": {
+    "help": {
+      "denied": "Location is blocked for this site. Click the lock icon next to the web address, set Location to Allow, then reload.",
+      "prompt": "Your browser is waiting for your permission. Look for the location prompt near the address bar and choose Allow.",
+      "unavailable": "Your device isn't sharing a location. On Windows open Settings → Privacy & security → Location and turn on Location services. On a phone, turn on Location and Wi-Fi.",
+      "insecure": "Location only works on a secure (https) address. Open the https link instead."
+    },
+    "retry": "Try again",
+    "manual": "Set my location on the map",
+    "tapMap": "Tap the map where you are",
+    "tapMapBody": "Your convoy will see you here until GPS works.",
+    "approxTitle": "Approximate location",
+    "approxBody": "No GPS chip found, so ONEROUTE is using Wi-Fi location. It can be off by a few hundred metres."
+  },
+  "turn": {
+    "preparing": "Preparing directions…",
+    "preview": "Preview from the trip start. Live directions begin when your location is found.",
+    "open": "Open full-screen navigation"
+  },
+  "start": {
+    "label": "Starting point",
+    "placeholder": "My current location",
+    "search": "Search",
+    "searchAria": "Search for a starting point",
+    "searching": "Searching…",
+    "hint": "Leave empty to start from where you are now.",
+    "chosen": "✓ Starting from: {{place}}",
+    "useCurrent": "Use my current location instead",
+    "pick": "Pick your starting point from the results, or clear the box to start from where you are.",
+    "none": "No places found. Try a more specific name.",
+    "failed": "Search failed. Check your internet connection."
+  },
+  "eta": {
+    "h_m": "{{h}} h {{m}} min",
+    "h": "{{h}} h",
+    "m": "{{m}} min",
+    "under": "Under 1 min",
+    "arrive": "Arrive {{time}}",
+    "toDestination": "To destination",
+    "estimate": "Estimate without live traffic",
+    "arrived": "You have arrived"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode"
+  }
+}

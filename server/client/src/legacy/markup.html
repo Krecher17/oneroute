@@ -1,0 +1,267 @@
+<section id="setup" role="main" aria-label="Start or join a trip" hidden>
+  <div class="acct-bar">
+    <div class="acct-who">
+      <button type="button" class="acct-avatar" id="acctAvatar" aria-label="Change profile photo">
+        <span id="acctAvatarLetter" aria-hidden="true">?</span>
+        <img id="acctAvatarImg" alt="" hidden>
+        <i class="acct-cam" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg></i>
+      </button>
+      <div class="acct-text">
+        <span>Signed in as <b id="acctName"></b></span>
+        <div class="acct-links"><button type="button" id="acctChange">Add photo</button><button type="button" id="acctRemove" hidden>Remove photo</button><button type="button" id="acctDelete" class="danger-link">Delete account</button></div>
+        <small id="acctPhotoMsg" role="status"></small>
+      </div>
+    </div>
+    <button id="signOut" class="secondary" type="button">Sign out</button>
+    <input type="file" id="acctPhotoFile" accept="image/*" hidden>
+  </div>
+  <div class="lang-row" id="langSlot"></div>
+  <div class="delete-panel" id="deletePanel" role="group" aria-labelledby="deleteTitle" hidden>
+    <h2 id="deleteTitle">Delete your account?</h2>
+    <p>This permanently erases your account, profile photo and saved sign-ins. It can’t be undone.</p>
+    <label class="field-label" for="deletePassword" id="deleteLabel">Enter your password to confirm</label>
+    <input id="deletePassword" type="password" autocomplete="current-password">
+    <p id="deleteError" role="alert"></p>
+    <div class="delete-actions"><button type="button" id="deleteConfirm" class="danger">Delete my account</button><button type="button" id="deleteCancel" class="secondary">Cancel</button></div>
+  </div>
+  <div class="hero">
+    <div class="brand">⬡ ONEROUTE</div>
+    <p class="eyebrow">Convoy control system</p>
+    <h1>One route.<br><span class="accent-text">One timing.</span><br>Together.</h1>
+    <p>Keep your people together on the road. See your convoy, spot missed turns and regroup.</p>
+  </div>
+  <div class="card">
+    <h2>Your driver profile</h2>
+    <label class="field-label" for="name">Your name</label>
+    <input id="name" maxlength="20" autocomplete="nickname" placeholder="Enter your name">
+  </div>
+  <div class="card">
+    <h2>Location sharing</h2>
+    <label class="loc-consent"><input type="checkbox" id="locConsent"><span>I agree to share my live location, name and photo with everyone in the trip, and with anyone who has its live link, until I tap “Stop sharing &amp; leave”.</span></label>
+  </div>
+  <div class="card">
+    <p class="eyebrow">Start a convoy</p>
+    <h2>Where are we heading?</h2>
+    <div id="startSlot"></div>
+    <label class="field-label" for="dest">Destination</label>
+    <div class="search-row">
+      <input id="dest" placeholder="Search destination" autocomplete="off">
+      <button id="search" aria-label="Search for destination">Search</button>
+    </div>
+    <div id="results" class="results"></div>
+    <p id="chosenDest" class="chosen-dest" role="status" hidden></p>
+    <button id="create" class="full">＋ Create trip</button>
+  </div>
+  <div class="card">
+    <p class="eyebrow">Join your people</p>
+    <h2>Already have a code?</h2>
+    <label class="sr-only" for="code">Trip code, 4 letters</label>
+    <input id="code" maxlength="4" placeholder="4-letter trip code" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;letter-spacing:4px">
+    <button id="join" class="full secondary">Join trip →</button>
+  </div>
+  <div id="msg" role="status"></div>
+  <p class="subtitle">Your location is shared with your trip participants while sharing is active. Only join trips with people you trust.</p>
+  <footer class="legal-footer" aria-label="Legal information">
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+          <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a> ·
+          <a href="/cookies.html" target="_blank" rel="noopener noreferrer">Cookie policy</a> ·
+          <a href="/refund.html" target="_blank" rel="noopener noreferrer">Refund policy</a>
+        </footer>
+</section>
+
+<section id="planner" role="main" aria-label="Plan your route" hidden>
+  <header class="planner-header"><button id="backToSetup" class="secondary">← Back</button><div><h1>Plan your route</h1><small>Add fuel, food, rest or rally stops before sharing the trip.</small></div><div id="langSlotPlanner" class="lang-icon-slot"></div></header>
+  <div class="planner-layout"><div class="card"><p class="eyebrow">Destination</p><h2 id="plannerDestination">Selected destination</h2>
+    <label class="field-label" for="waypointSearch">Search for a waypoint</label><div class="search-row"><input id="waypointSearch" placeholder="Fuel station, rest stop, town…"><button id="searchWaypoint" aria-label="Search for a stop">Search</button></div>
+    <div id="waypointResults" class="results"></div><h2 style="margin-top:20px">Planned stops</h2><div id="plannerStops"></div>
+    <h2 style="margin-top:20px">Route options</h2>
+    <p class="muted" id="routeOptionsHint">Compare the fastest roads before you start. Adding stops builds its own route.</p>
+    <button type="button" id="compareRoutes" class="secondary">Compare routes</button>
+    <div id="routeOptions" role="radiogroup" aria-label="Route options"></div>
+    <p id="plannerMessage" class="muted">Search for a place and add it to your route.</p><button id="startPlannedTrip" class="full">Confirm stops & start trip</button>
+  </div><div id="plannerMap"></div></div>
+</section>
+<div id="app" hidden>
+  <header class="topbar">
+    <div><div class="brand">⬡ ONEROUTE</div><small id="topdest">Convoy trip</small></div>
+    <div class="topbar-end"><div id="langSlotTop"></div><div class="live">● LIVE</div></div>
+  </header>
+
+  <main>
+    <section id="screen-map" class="screen active">
+      <div class="screen-title-row"><div><p class="eyebrow">Command center</p>
+      <h1>Live convoy</h1></div><div id="drivingSlot"></div></div>
+      <p class="subtitle" id="destlabel">Everyone on the same route.</p>
+      <div id="turnSlot"></div>
+      <div id="gpsHelpSlot"></div>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-wait" id="mapWait" role="status" hidden><div class="busy-orb" id="mapWaitOrb"></div><p id="mapWaitText">Finding your location…</p></div>
+        <div class="speed-bubble" aria-live="polite"><strong id="speedValue">--</strong><small>km/h</small></div>
+        <div class="map-tools">
+          <button id="openNavigation">➤ Navigation</button>
+          <button id="recenter">⌖ Recenter</button>
+          <button id="follow">Follow: ON</button>
+          <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
+          <button id="pinToggle" aria-expanded="false">📍 Drop pin</button>
+          <button id="styleToggle" aria-pressed="false">🛰 Satellite</button>
+          <button id="headingToggle" aria-pressed="false">🧭 Heading up: OFF</button>
+          <button id="helpOpen" hidden>🆘 Help nearby</button>
+          <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+          <button id="haltToggle">⏸ I'm stopping</button>
+          <button id="sosButton">🆘 SOS</button>
+          <button id="alertsToggle">🔊 Alerts: ON</button>
+          <button id="navVoiceToggle" aria-pressed="true">🧭 Voice guidance: ON</button>
+        </div>
+        <div id="quickStopMenu" class="quick-stop-menu" hidden>
+          <h3>Add a stop to your convoy route</h3>
+          <button data-stop-query="Fuel station">⛽ Fuel station</button>
+          <button data-stop-query="Restaurant">🍽️ Restaurant</button>
+          <button data-stop-query="Rest area">🛏️ Rest area</button>
+          <button id="closeQuickStop" class="close-stop">Cancel</button>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="memberCount">—</strong><small>In this trip</small></div>
+        <div class="metric"><label>Furthest gap</label><strong id="gap">—</strong><small>Distance behind</small></div>
+        <div class="metric"><label>On route</label><strong id="onroute">—</strong><small>Current status</small></div>
+      </div>
+      <section class="card weather-card" id="weatherCard" aria-labelledby="weatherTitle">
+        <div class="weather-head"><h2 id="weatherTitle">🌦️ Weather on your route</h2><button type="button" id="weatherRefresh" class="mini-btn">Refresh</button></div>
+        <p id="weatherAlert" class="weather-alert" role="status" hidden></p>
+        <div id="weatherList"><p class="subtitle">Loading weather…</p></div>
+        <small class="muted">Forecast by Open-Meteo.com</small>
+      </section>
+      <section class="voice-console" id="mapVoiceConsole">
+        <h2>🎙️ Convoy voice messages</h2>
+        <p>Record a short audio message and send it to everyone in your convoy. Tap again to stop recording.</p>
+        <div class="voice-controls"><button type="button" id="mapTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Hold to talk</span></button><span id="mapTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="mapTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Hold the mic, speak, release to send</span></div>
+        <canvas id="mapWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
+        <div id="voiceMessages" class="voice-messages" aria-live="polite"></div>
+      </section>
+      <section id="sosPanel" class="sos-panel" hidden><h2>🆘 SOS</h2><div id="sosList"></div></section>
+      <section id="regroupPanel" class="regroup-panel" hidden>
+        <p class="eyebrow">Smart regroup</p><h2 id="regroupTitle">Regroup point</h2><p id="regroupDetail" class="subtitle"></p>
+        <div class="panel-actions"><button id="regroupShow">Show on map</button><button id="regroupDismiss" class="secondary">Dismiss</button></div>
+      </section>
+      <section id="haltPanel" class="halt-panel" hidden>
+        <h2>⏸ Convoy halts</h2><p id="haltSummary" class="subtitle"></p><div id="haltList"></div>
+      </section>
+      <section class="waypoints-panel">
+        <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
+        <div id="waypointsList"></div>
+        <p id="emptyWaypoints" class="subtitle">No stops added yet. Add stops when planning your route.</p>
+        <button id="editWaypoints" class="secondary full">Edit route & stops</button>
+      </section>
+      <div class="card">
+        <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button></div>
+      </div>
+      <div class="card"><h2>Live link for family</h2><p class="subtitle">Anyone with this link can watch the convoy on a map. It is read-only and needs no trip code, so only share it with people you trust.</p><button id="shareLive" class="full secondary">Share live link</button></div>
+    </section>
+
+    <section id="screen-status" class="screen">
+      <p class="eyebrow">People & positions</p><h1>Trip status</h1>
+      <p class="subtitle">See who's moving with your group.</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="smembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="sonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="sgap">—</strong></div>
+      </div>
+      <div class="card" id="statuscars"><small>Waiting for updates…</small></div>
+      <div class="card"><h2>Location sharing</h2><p class="subtitle">Stop sharing to leave this session on this device.</p><button id="stop" class="btn-danger-soft">Stop sharing & leave</button></div>
+    </section>
+
+    <section id="screen-chat" class="screen">
+      <p class="eyebrow">Coordinate together</p><h1>Convoy chat</h1>
+      <section class="voice-console" id="chatVoiceConsole">
+        <h2>🎙️ Voice chat</h2>
+        <p>Send an audio message to the convoy. Allow microphone access when your browser asks.</p>
+        <div class="voice-controls"><button type="button" id="chatTalkButton" class="voice-button" aria-pressed="false"><span class="voice-button-icon">🎙</span><span>Hold to talk</span></button><span id="chatTalkTimer" class="voice-timer">00:00</span></div>
+        <div id="chatTalkStatus" class="voice-status" aria-live="polite"><span class="status-dot"></span><span>Hold the mic, speak, release to send</span></div>
+        <canvas id="chatWave" class="wave" width="320" height="46" aria-hidden="true"></canvas>
+      </section>
+      <div class="card"><h2>Quick replies</h2><p class="subtitle">One tap, nothing to type. Everyone in the convoy sees it.</p><div id="quickGrid" class="quick-grid"></div></div>
+      <div class="card"><h2>Convoy messages</h2><div id="quickLog"><p class="subtitle">No messages yet.</p></div></div>
+      <div class="card"><h2>Received voice messages</h2><p class="subtitle">Audio messages received from convoy members appear in the voice message list on the Map tab.</p></div>
+      <div class="notice">For safety, passengers should handle messages while the vehicle is moving.</div>
+    </section>
+
+    <section id="screen-summary" class="screen">
+      <p class="eyebrow">Trip overview</p><h1>Trip summary</h1>
+      <p class="subtitle" id="summarydest">Live session figures</p>
+      <div class="metrics">
+        <div class="metric"><label>Members</label><strong id="umembers">—</strong></div>
+        <div class="metric"><label>On route</label><strong id="uonroute">—</strong></div>
+        <div class="metric"><label>Largest gap</label><strong id="ugap">—</strong></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><label>Separations</label><strong id="repSepCount">0</strong></div>
+        <div class="metric"><label>Longest</label><strong id="repLongest">—</strong></div>
+        <div class="metric"><label>Time stopped</label><strong id="repStopped">—</strong></div>
+      </div>
+      <div class="card"><h2>Who got separated</h2><div id="sepList"><p class="subtitle">No one has gotten separated yet.</p></div></div>
+      <div class="card"><h2>Arrivals</h2><div id="arrivalList"><p class="subtitle">Waiting for drivers…</p></div></div>
+      <div class="card"><h2>Stops</h2><div id="haltHistory"><p class="subtitle">No stops announced yet.</p></div></div>
+      <div class="card no-print"><h2>Export report</h2><p class="subtitle">Save this trip report or GPS route to share after the drive.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="reportPng">Download image</button><button id="reportPdf" class="secondary">Save as PDF</button></div></div>
+      <div class="card"><h2>Destination</h2><p id="destinationinfo" class="subtitle">Trip destination will appear here.</p></div>
+      <div class="notice">These statistics use the latest live update. Your current server stores trips in memory, so restarting it clears the trip.</div>
+      <div class="card" style="margin-top:14px"><small>Trip code</small><div class="code" id="summarycode">----</div><button id="share" class="full">Share invite</button></div>
+    </section>
+  <footer class="legal-footer" style="padding-bottom:96px" aria-label="Legal information">
+    <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+    <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a> ·
+    <a href="/cookies.html" target="_blank" rel="noopener noreferrer">Cookie policy</a> ·
+    <a href="/refund.html" target="_blank" rel="noopener noreferrer">Refund policy</a>
+  </footer>
+  </main>
+  <div id="banner" role="status" aria-live="polite"></div>
+  <div id="voiceToast" role="status" aria-live="polite" hidden></div>
+  <div id="notice" role="alert" hidden></div>
+  <div class="sheet" id="driverSheet" role="dialog" aria-labelledby="driverTitle" hidden></div>
+  <div class="sheet" id="pinSheet" role="dialog" aria-labelledby="pinSheetTitle" hidden>
+    <h2 id="pinSheetTitle">Drop a pin for the convoy</h2>
+    <div class="kind-row" id="pinKinds" role="radiogroup" aria-label="Pin type"></div>
+    <label class="field-label" for="pinNote">Note</label>
+    <input id="pinNote" maxlength="80" placeholder="e.g. speed trap, pothole, food stop" autocomplete="off">
+    <div class="sheet-actions"><button type="button" id="pinHere">Drop at my location</button><button type="button" id="pinChoose" class="secondary">Choose on map</button><button type="button" id="pinCancel" class="secondary">Cancel</button></div>
+  </div>
+  <div class="sheet" id="stopVoteSheet" role="dialog" aria-labelledby="stopVoteTitle" hidden>
+    <h2 id="stopVoteTitle">☕ Convoy Stop Proposed</h2>
+    <p class="subtitle" id="stopVoteSubtitle">A driver proposed a regrouping stop.</p>
+    <div id="stopVoteDetails" style="margin:12px 0;font-size:15px;font-weight:700"></div>
+    <div class="metrics">
+      <div class="metric"><label>Yes votes</label><strong id="stopVoteYes">1</strong></div>
+      <div class="metric"><label>No votes</label><strong id="stopVoteNo">0</strong></div>
+      <div class="metric"><label>Needed</label><strong id="stopVoteNeeded">2</strong></div>
+    </div>
+    <div class="sheet-actions" style="margin-top:14px">
+      <button type="button" id="stopVoteYesBtn" style="background:#42c786;color:#17191d">Vote Yes (Stop)</button>
+      <button type="button" id="stopVoteNoBtn" class="secondary">Vote No (Skip)</button>
+    </div>
+  </div>
+  <div class="sheet" id="helpSheet" role="dialog" aria-labelledby="helpTitle" hidden>
+    <h2 id="helpTitle">🆘 Help nearby</h2>
+    <p class="subtitle" id="helpWho"></p>
+    <a class="call-btn" href="tel:112">📞 Call 112 (emergency)</a>
+    <div id="helpBody"></div>
+    <div class="sheet-actions"><button type="button" id="helpClose" class="secondary">Close</button></div>
+  </div>
+  <div id="busy" role="status" aria-live="polite" hidden><div class="busy-box"><div class="busy-orb"></div><p id="busyLabel"></p><small id="busyHint"></small></div></div>
+</div>
+
+<section id="navigationScreen" role="dialog" aria-modal="true" aria-label="Full-screen navigation" hidden>
+  <header class="navtop"><div class="brand">⬡ ONEROUTE</div><div class="navdest"><strong id="navDestination">Navigation</strong><small id="navRouteMeta">Preparing directions…</small></div><button id="navVoiceToggle2" class="secondary" aria-pressed="true" title="Spoken directions">🔊 Voice</button><button id="navSos" class="secondary" aria-label="Send SOS">🆘</button><button id="navHalt" class="secondary">⏸ Stop</button><button id="closeNavigation" class="secondary" aria-label="Exit navigation">✕ Exit</button></header>
+  <div class="nav-turn" aria-live="polite"><div class="turn-icon" id="navTurnIcon">↑</div><div class="turn-copy"><small id="navTurnLabel">NEXT MANEUVER</small><strong id="navInstruction">Finding your route…</strong><span id="navRoadName">Keep the convoy together</span></div><div class="turn-distance" id="navTurnDistance">—<small>TO TURN</small></div></div>
+  <div class="nav-map-area"><div id="navMap"></div><div class="nav-map-badge">● <b id="navLiveCount">0 vehicles</b> · <span id="navLiveStatus">live convoy positions</span><span id="navOfflineRoute" class="nav-offline-route" role="status" hidden>Offline route</span></div><div id="etaSlotNav" class="nav-eta-slot"></div></div>
+  <div class="nav-bottom"><div class="nav-bottom-head"><strong>Convoy locations</strong><span>Tap a driver to focus map</span></div><div id="navConvoy" class="nav-convoy"></div><div class="nav-bottom-head" style="margin-top:4px"><strong>Upcoming directions</strong><span id="navStepsCount">Turn-by-turn</span></div><div id="navNextSteps" class="nav-next-list"></div><div class="nav-note" id="navNotice">Directions use the Open Source Routing Machine public demo service. Keep your eyes on the road and follow road signs.</div></div>
+</section>
+
+<nav id="nav" class="bottom-nav" hidden aria-label="Main navigation">
+  <button class="nav-btn active" data-screen="map" aria-current="page"><span class="ico" aria-hidden="true">⌖</span>MAP</button>
+  <button class="nav-btn" data-screen="status"><span class="ico" aria-hidden="true">◎</span>STATUS</button>
+  <button class="nav-btn" data-screen="chat"><span class="ico" aria-hidden="true">☏</span>CHAT</button>
+  <button class="nav-btn" data-screen="summary"><span class="ico" aria-hidden="true">▤</span>SUMMARY</button>
+</nav>
+
+<canvas id="confetti" aria-hidden="true"></canvas>

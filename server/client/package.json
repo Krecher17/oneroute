@@ -1,0 +1,44 @@
+{
+  "name": "oneroute-client",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ONEROUTE web and app frontend (Vite + React + TypeScript, PWA, Capacitor-ready)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "node scripts/clean-build.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "npm run build && cap sync android && cap open android",
+    "theme": "node scripts/generate-light-theme.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0",
+    "@sentry/react": "^10.0.0",
+    "i18next": "^25.0.0",
+    "i18next-browser-languagedetector": "^8.0.0",
+    "maplibre-gl": "4.7.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.0.0",
+    "socket.io-client": "^4.8.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^26.0.0",
+    "postcss": "^8.5.0",
+    "typescript": "~5.9.0",
+    "vite": "^7.0.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^3.0.0",
+    "workbox-window": "^7.3.0"
+  }
+}

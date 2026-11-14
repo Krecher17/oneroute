@@ -2,9 +2,9 @@
 // ONEROUTE extras: nearest help for SOS, weather on the route, and route alternatives.
 // Uses only free services and Node's built-in fetch. No extra packages.
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
-const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving';
+const OVERPASS_URL = process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter';
+const WEATHER_URL = process.env.WEATHER_URL || 'https://api.open-meteo.com/v1/forecast';
+const OSRM_URL = process.env.OSRM_URL || 'https://router.project-osrm.org/route/v1/driving';
 const USER_AGENT = 'ONEROUTE-ConvoyApp/1.0';
 
 const toRad = (d) => (d * Math.PI) / 180;

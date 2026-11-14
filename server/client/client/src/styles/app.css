@@ -1,0 +1,131 @@
+/* Styles for the React-built UI. Colours, radii and motion reuse the tokens from legacy.css (:root there). */
+:root {
+  --surface-2: #2c3039;
+  --on-red: #17191d;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --dur-ui: 180ms;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- language picker ---------- */
+.lang-switch { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.lang-switch svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.lang-switch select {
+  width: auto; padding: 8px 28px 8px 10px; border-radius: 10px; font-size: 14px; color: var(--text);
+  background: var(--bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 9px center;
+  border: 1px solid var(--line); appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.lang-switch select:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+.auth-lang { display: flex; justify-content: center; margin: 14px auto 0; }
+
+/* ---------- install / update / offline ---------- */
+.prompt-stack { position: fixed; left: 12px; right: 12px; bottom: calc(12px + var(--safe-bottom)); z-index: 4000; display: grid; gap: 10px; justify-items: center; pointer-events: none; }
+.prompt-stack.above-nav { bottom: calc(92px + var(--safe-bottom)); }
+.prompt { pointer-events: auto; width: min(100%, 440px); background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 12px 34px rgba(0,0,0,.45); animation: prompt-in var(--dur-ui) var(--ease) both; }
+.prompt h2 { margin: 0 0 4px; font-size: 15px; }
+.prompt p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.prompt-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.prompt-actions button { padding: 10px 14px; font-size: 14px; min-height: 44px; }
+.prompt-actions .quiet { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.prompt.warn { border-color: var(--orange); }
+.conn-banner { pointer-events: none; display: flex; align-items: center; gap: 10px; background: #2b2417; color: #fbe3b0; border: 1px solid var(--orange); border-radius: 999px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; }
+.conn-banner i { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); flex: none; }
+@keyframes prompt-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- driving mode ---------- */
+.screen-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.drv-entry {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 10px 16px; border-radius: 999px;
+  background: var(--yellow); color: var(--on-red); font-size: 14px; font-weight: 800; margin-bottom: 8px;
+}
+.drv-entry svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.drv { position: fixed; inset: 0; z-index: 5000; background: #0e1013; color: var(--text); display: flex; flex-direction: column; gap: 12px; padding: calc(10px + var(--safe-top)) 14px calc(12px + var(--safe-bottom)); overflow: auto; }
+.drv:focus { outline: none; }
+.drv-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; }
+.drv-meta { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: .3px; }
+.drv-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--green); flex: none; }
+.drv-dot.wait { background: var(--orange); }
+.drv-exit { min-height: 48px; padding: 10px 18px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); font-size: 16px; }
+
+.drv-alert { background: var(--red); color: var(--on-red); border-radius: 16px; padding: 14px 16px; font-size: 20px; font-weight: 900; line-height: 1.25; }
+
+.drv-turn { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 16px 18px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 18px; }
+.drv-turn-icon { grid-row: span 3; font-size: 76px; line-height: 1; color: var(--yellow); min-width: 84px; text-align: center; }
+.drv-turn-label { font-size: 12px; letter-spacing: 2px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.drv-turn-dist { font-size: 54px; line-height: 1; font-weight: 950; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.drv-turn-text { font-size: 19px; font-weight: 700; line-height: 1.25; }
+.drv-turn-road { font-size: 14px; color: var(--muted); }
+.drv-turn.idle { grid-template-columns: 1fr; text-align: center; padding: 22px 18px; }
+.drv-turn.idle .drv-turn-text { color: var(--muted); }
+
+.drv-speed { display: flex; align-items: baseline; justify-content: center; gap: 12px; padding: 4px 0; }
+.drv-speed b { font-size: clamp(88px, 28vw, 150px); line-height: .95; font-weight: 950; letter-spacing: -3px; font-variant-numeric: tabular-nums; }
+.drv-speed span { font-size: 22px; color: var(--muted); font-weight: 800; }
+
+.drv-convoy { border-radius: 16px; padding: 12px 16px; border: 1px solid var(--line); background: var(--card); font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.drv-convoy small { font-size: 14px; color: var(--muted); font-weight: 700; }
+.drv-convoy.ok { border-color: #2d6b4d; }
+.drv-convoy.ok .drv-convoy-state { color: var(--green); }
+.drv-convoy.warn { border-color: var(--orange); }
+.drv-convoy.warn .drv-convoy-state { color: var(--orange); }
+.drv-convoy.bad { border-color: var(--red); }
+.drv-convoy.bad .drv-convoy-state { color: var(--red); }
+
+.drv-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: auto; }
+.drv-btn { min-height: 92px; border-radius: 22px; font-size: 18px; font-weight: 900; padding: 10px; display: grid; place-items: center; gap: 4px; background: var(--surface-2); color: var(--text); border: 2px solid var(--line); text-align: center; line-height: 1.15; }
+.drv-btn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.drv-btn small { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.drv-btn[aria-pressed="true"] small, .drv-sos small { color: inherit; } /* full strength on yellow, red and white: opacity would break contrast */
+.drv-btn[aria-pressed="true"] { background: var(--yellow); color: var(--on-red); border-color: var(--yellow); }
+.drv-btn.rec[aria-pressed="true"] { background: var(--red); border-color: var(--red); }
+.drv-sos { grid-column: 1 / -1; min-height: 104px; background: var(--red); color: var(--on-red); border-color: var(--red); font-size: 28px; position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drv-sos[aria-pressed="true"] { background: #fff; color: var(--red); border-color: var(--red); }
+.drv-sos .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(23,25,29,.28); pointer-events: none; }
+.drv-sos > span { position: relative; }
+.drv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.drv-foot label { display: flex; align-items: center; gap: 12px; min-height: 52px; font-size: 14px; color: var(--text); font-weight: 700; cursor: pointer; }
+.drv-foot input[type="checkbox"] { width: 26px; height: 26px; accent-color: var(--yellow); flex: none; }
+.drv-foot em { font-style: normal; display: block; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.drv-tip { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .drv { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: auto auto 1fr auto; column-gap: 14px; row-gap: 8px; }
+  .drv-top, .drv-alert { grid-column: 1 / -1; }
+  .drv-turn-icon { font-size: 56px; min-width: 64px; }
+  .drv-turn-dist { font-size: 40px; }
+  .drv-speed b { font-size: clamp(64px, 18vh, 110px); }
+  .drv-actions { grid-column: 2; grid-row: 3 / span 2; margin-top: 0; align-content: end; }
+  .drv-btn { min-height: 72px; }
+  .drv-sos { min-height: 80px; font-size: 22px; }
+  .drv-tip { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt { animation: none; }
+  .drv-sos .fill { transition: none !important; }
+}
+
+/* tablets and desktops: keep the driving screen a comfortable width instead of stretching edge to edge */
+@media (min-width: 760px) and (min-height: 521px) {
+  .drv { padding-left: max(14px, calc((100vw - 720px) / 2)); padding-right: max(14px, calc((100vw - 720px) / 2)); }
+}
+
+/* "Did you mean…?" heading above fuzzy search suggestions */
+.dym { margin: 14px 0 2px; font-size: 13px; font-weight: 800; color: var(--yellow); }
+
+.lang-row { display: flex; justify-content: flex-end; margin: 0 0 14px; }
+
+/* compact picker: a round globe button; the real <select> sits invisibly on top so the native list opens on tap */
+.lang-switch.icon { position: relative; width: 44px; height: 44px; justify-content: center; gap: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); color: var(--text); flex: none; }
+.lang-switch.icon svg { width: 20px; height: 20px; }
+.lang-switch.icon select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; cursor: pointer; }
+.lang-switch.icon:focus-within { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.topbar-end { display: flex; align-items: center; gap: 12px; }
+.lang-icon-slot { margin-left: auto; }
+
+/* satellite button inside each map */
+.map-sat-fab { position: absolute; left: 10px; top: 10px; z-index: 5; min-height: 40px; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: rgba(23,25,29,.9); color: var(--text); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+.map-sat-fab[aria-pressed="true"] { background: var(--yellow); color: var(--on-red); border-color: var(--yellow); }
+#navMap .map-sat-fab { left: auto; right: 10px; top: 50%; transform: translateY(-50%); }
