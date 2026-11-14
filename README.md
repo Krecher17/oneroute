@@ -231,3 +231,13 @@ The server serves the built client from `server/web-dist`. Set `TOMTOM_TRAFFIC_A
 For a Node web service, use root directory `server`, build command `npm ci && npm --prefix client ci --include=dev && npm --prefix client run build`, and start command `npm start`.
 
 Accounts, sessions and avatars are stored under `DATA_DIR`. Before opening registrations, attach durable storage and set `DATA_DIR` to a directory on that mount. Verify that a test account survives a redeploy. Active trips are held in memory and reset when the server restarts.
+
+## Move existing accounts to Supabase
+
+1. Back up the production accounts.json from the current DATA_DIR before any redeploy. Use the production snapshot, not a local development copy. If the old file is gone, restore it from a backup before importing.
+2. Run server/account-store-schema.sql in the destination Supabase project.
+3. Place the snapshot at DATA_DIR/accounts.json where the Render server can read it on first boot. Set SUPABASE_URL and either SUPABASE_SECRET_KEY or SUPABASE_SERVICE_KEY in the server environment. Keep a single server instance for this account store.
+4. Deploy and verify that an existing account can sign in with its existing password. The first startup imports the snapshot into an empty account store. Subsequent starts load the Supabase snapshot. An existing remote snapshot is never replaced by the local file.
+5. Keep the avatar files under DATA_DIR/avatars on durable storage. The import preserves photo references, while the image files remain on disk.
+
+For a brand-new installation with no account history, set ONEROUTE_ALLOW_EMPTY_ACCOUNT_STORE=true for the first startup. Leave it unset when migrating existing accounts.

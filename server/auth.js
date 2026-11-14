@@ -1,5 +1,5 @@
 // auth.js
-// ONEROUTE accounts, stored locally on the server (no external database).
+// ONEROUTE accounts and sessions use Supabase when configured.
 // Accounts and sessions live in data/accounts.json, avatars in data/avatars/.
 // All routes are unchanged: /api/signup, /api/login, /api/me, /api/logout,
 // /api/avatar, /api/account/delete, /api/google, /api/config, /avatar/:file
@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import express from 'express';
+import { loadAccountStore, saveAccountStore, usesSupabase } from './account-store.js';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 
@@ -32,17 +33,19 @@ const AVATAR_DIR = path.join(DATA_DIR, 'avatars');
 
 let db = { users: {}, sessions: {} };
 
-function loadDb() {
+function readAccountBackup() {
   try {
     const parsed = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
-    db = { users: parsed.users || {}, sessions: parsed.sessions || {} };
+    if (!parsed.users || !parsed.sessions) throw new Error('Invalid account backup.');
+    return parsed;
   } catch (err) {
-    if (err.code !== 'ENOENT') console.error('accounts file could not be read, starting empty:', err.message);
+    if (err.code === 'ENOENT') return null;
+    throw err;
   }
-  pruneSessions();
 }
 
-function saveDb() {
+async function saveDb() {
+  if (usesSupabase) return saveAccountStore(db);
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const tmp = `${ACCOUNTS_FILE}.tmp`;
@@ -59,7 +62,8 @@ function pruneSessions() {
   for (const [k, s] of Object.entries(db.sessions)) if (!(s.exp > now)) delete db.sessions[k];
 }
 
-loadDb();
+db = (usesSupabase ? await loadAccountStore(readAccountBackup) : readAccountBackup()) ?? db;
+pruneSessions();
 
 const userCount = () => Object.keys(db.users).length;
 const findByEmail = (email) => Object.values(db.users).find((u) => u.email === email) || null;
@@ -97,11 +101,11 @@ async function verifyPassword(password, stored) {
 
 const tokenKey = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-function createSession(userId) {
+async function createSession(userId) {
   pruneSessions();
   const token = crypto.randomBytes(32).toString('hex');
   db.sessions[tokenKey(token)] = { userId, exp: Date.now() + SESSION_MS };
-  saveDb();
+  await saveDb();
   return token;
 }
 
@@ -277,7 +281,7 @@ export function registerAuthRoutes(app, hooks = {}) {
         createdAt:    new Date().toISOString(),
       };
       db.users[user.id] = user;
-      const token = createSession(user.id);
+      const token = await createSession(user.id);
 
       console.log('account created');
       res.status(201).json({ token, user: publicUser(user), newAccount: true });
@@ -304,7 +308,7 @@ export function registerAuthRoutes(app, hooks = {}) {
       }
 
       attempts.delete(key);
-      res.json({ token: createSession(user.id), user: publicUser(user) });
+      res.json({ token: await createSession(user.id), user: publicUser(user) });
     } catch (err) {
       console.error('login failed:', err);
       res.status(500).json({ error: 'Could not sign in. Try again.' });
@@ -353,7 +357,7 @@ export function registerAuthRoutes(app, hooks = {}) {
           createdAt:    new Date().toISOString(),
         };
         db.users[user.id] = user;
-        const token = createSession(user.id);
+        const token = await createSession(user.id);
         console.log('account created (google)');
         return res.status(201).json({ token, user: publicUser(user), newAccount: true });
       }
@@ -365,7 +369,7 @@ export function registerAuthRoutes(app, hooks = {}) {
         return res.status(401).json({ error: 'This email belongs to a different Google account.' });
       }
 
-      const token = createSession(existing.id); // also saves the link above
+      const token = await createSession(existing.id); // also saves the link above
       console.log('google sign-in');
       res.json({ token, user: publicUser(existing) });
     } catch (err) {
@@ -393,7 +397,7 @@ export function registerAuthRoutes(app, hooks = {}) {
       const newFile = saveAvatarFile(body);
       const oldFile = user.avatarFile;
       user.avatarFile = newFile;
-      saveDb();
+      await saveDb();
       removeAvatarFile(oldFile);
 
       res.json({ user: { ...req.user, avatar: avatarUrl(user) } });
@@ -409,7 +413,7 @@ export function registerAuthRoutes(app, hooks = {}) {
       if (user) {
         const oldFile = user.avatarFile;
         user.avatarFile = null;
-        saveDb();
+        await saveDb();
         removeAvatarFile(oldFile);
       }
       res.json({ user: { ...req.user, avatar: null } });
@@ -452,7 +456,7 @@ export function registerAuthRoutes(app, hooks = {}) {
       removeAvatarFile(user.avatarFile);
       dropSessionsOf(user.id);
       delete db.users[user.id];
-      saveDb();
+      await saveDb();
 
       if (typeof hooks.onAccountDeleted === 'function') hooks.onAccountDeleted(req.user.id);
       console.log('account deleted');
@@ -464,12 +468,12 @@ export function registerAuthRoutes(app, hooks = {}) {
   });
 
   // ── /api/logout ──
-  app.post('/api/logout', (req, res) => {
+  app.post('/api/logout', async (req, res) => {
     try {
       const token = bearer(req);
       if (token && db.sessions[tokenKey(token)]) {
         delete db.sessions[tokenKey(token)];
-        saveDb();
+        await saveDb();
       }
     } catch { /* not critical */ }
     res.json({ ok: true });
