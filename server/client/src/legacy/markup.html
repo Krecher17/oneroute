@@ -59,6 +59,17 @@
     <input id="code" maxlength="4" placeholder="4-letter trip code" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;letter-spacing:4px">
     <button id="join" class="full secondary">Join trip →</button>
   </div>
+  <section id="tripLibrary" class="card">
+    <h2>Trips and groups</h2>
+    <button type="button" id="resumeCachedRoute" hidden>Resume last route</button>
+    <div id="tripLibraryList"></div>
+    <label class="field-label" for="groupName">Group name</label>
+    <input id="groupName" maxlength="80" placeholder="Family or college friends">
+    <label class="field-label" for="groupMembers">Members (comma separated)</label>
+    <input id="groupMembers" maxlength="1200">
+    <button type="button" id="saveRecurringGroup">Save group</button>
+    <p id="tripLibraryStatus" role="status"></p>
+  </section>
   <div id="msg" role="status"></div>
   <p class="subtitle">Your location is shared with your trip participants while sharing is active. Only join trips with people you trust.</p>
   <footer class="legal-footer" aria-label="Legal information">
@@ -152,7 +163,7 @@
         <div class="waypoints-heading"><h2>UPCOMING WAYPOINTS</h2><span id="routeName">YOUR ROUTE</span></div>
         <div id="waypointsList"></div>
         <p id="emptyWaypoints" class="subtitle">No stops added yet. Add stops when planning your route.</p>
-        <button id="editWaypoints" class="secondary full">Edit route & stops</button>
+        <div><button id="saveActiveRoute" class="secondary" type="button">Save route</button><label class="field-label" for="inviteGroup">Invite a saved group</label><select id="inviteGroup"></select><button type="button" class="secondary" id="shareGroupInvite">Share group invite</button><span id="saveActiveRouteStatus" role="status"></span></div><button id="editWaypoints" class="secondary full">Edit route & stops</button>
       </section>
       <div class="card">
         <div class="code-row"><div><small>Share this trip code</small><div class="code" id="tripcode">----</div></div><button id="copy" aria-label="Copy trip code">Copy</button></div>

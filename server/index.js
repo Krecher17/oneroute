@@ -311,11 +311,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
   maxHttpBufferSize: 2_000_000,
+  pingInterval: 15000,
+  pingTimeout: 25000,
 });
 
 // Only signed-in people can connect. The page sends its saved login token with the connection.
-io.use((socket, next) => {
-  const user = authUserFromToken(socket.handshake.auth?.token);
+io.use(async (socket, next) => {
+  const user = await authUserFromToken(socket.handshake.auth?.token);
   if (!user) return next(new Error('unauthorized'));
   socket.data.user = user;
   next();
@@ -388,15 +390,19 @@ async function buildRoute(start, destination, waypoints = []) {
 
 function addMember(trip, socket, name) {
   const clean = String(name || socket.data?.user?.name || 'Driver').trim().slice(0, 20) || 'Driver';
-  // Replace an old disconnected entry if this driver rejoins with the same name.
+  if (trip.members.has(socket.id)) return;
+  let previous;
+  // Match reconnects by account rather than display name.
   for (const [id, member] of trip.members) {
-    if (!member.online && member.name === clean) {
+    if (!member.online && member.userId === socket.data.user.id) {
       // A rejoining driver replaces their old entry, so clear any SOS that entry still had.
       if (member.sos) io.to(trip.code).emit('sos', { id, name: member.name, state: 'cleared', lat: null, lon: null, at: Date.now() });
+      previous = member;
       trip.members.delete(id);
     }
   }
 
+  if (previous?.id === trip.creatorId) trip.creatorId = socket.id;
   socket.join(trip.code);
   trip.members.set(socket.id, {
     id: socket.id,
@@ -404,11 +410,11 @@ function addMember(trip, socket, name) {
     userId: socket.data?.user?.id || null,
     avatar: avatarForUser(socket.data?.user?.id), // profile picture shown on the map instead of the first letter
     online: true,
-    pos: null,
-    history: [],
-    accuracy: null,
-    snapKm: 0,
-    offMeters: 0,
+    pos: previous?.pos ?? null,
+    history: previous?.history ?? [],
+    accuracy: previous?.accuracy ?? null,
+    snapKm: previous?.snapKm ?? 0,
+    offMeters: previous?.offMeters ?? 0,
     offSince: null,
     flagged: false,
     gapWarned: false,
@@ -421,10 +427,10 @@ function addMember(trip, socket, name) {
     lastPingAt: 0,
     lastPinAt: 0,
     speed: DEFAULT_SPEED,
-    lastSeen: 0,
+    lastSeen: previous?.lastSeen ?? 0,
     lastKm: null,
     lastT: null,
-    arrived: false,
+    arrived: previous?.arrived ?? false,
   });
 }
 
@@ -1359,10 +1365,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('position', (point) => {
+  socket.on('position', (point, ack) => {
     try {
+      const respond = typeof ack === 'function' ? ack : () => {};
       const member = trip?.members.get(socket.id);
-      if (member) updatePosition(trip, member, point);
+      if (!member || !point || !validPoint(point)) return respond({ ok: false });
+      const capturedAt = Math.min(Date.now(), Number(point.capturedAt) || Date.now());
+      if (capturedAt > member.lastSeen) {
+        if (Date.now() - capturedAt < STALE_MS) updatePosition(trip, member, point);
+        else member.pos = [Number(point.lon), Number(point.lat)];
+        member.lastSeen = capturedAt;
+      }
+      respond({ ok: true });
     } catch (error) {
       console.error('position error:', error);
       // Optionally, we could emit an error to the socket, but we don't want to spam.

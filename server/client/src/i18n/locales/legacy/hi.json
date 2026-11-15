@@ -250,5 +250,14 @@
 "Location permission denied. Allow location in browser settings.": "लोकेशन की अनुमति नहीं मिली। ब्राउज़र सेटिंग्स में लोकेशन की अनुमति दें।",
 "Could not get GPS. Try outside with GPS enabled.": "GPS नहीं मिला। GPS चालू करके बाहर खुले में कोशिश करें।",
 "Location timed out. Please try again.": "लोकेशन में बहुत देर लगी। कृपया फिर कोशिश करें।",
-"Still looking for GPS. Make sure location is allowed for this site.": "अभी भी GPS ढूँढ रहे हैं। जाँचें कि इस साइट के लिए लोकेशन की अनुमति है।"
+"Still looking for GPS. Make sure location is allowed for this site.": "अभी भी GPS ढूँढ रहे हैं। जाँचें कि इस साइट के लिए लोकेशन की अनुमति है।",
+  "Trips and groups": "यात्राएँ और समूह",
+  "Resume last route": "पिछला मार्ग फिर शुरू करें",
+  "Group name": "समूह का नाम",
+  "Family or college friends": "परिवार या कॉलेज के दोस्त",
+  "Members (comma separated)": "सदस्य (अल्पविराम से अलग करें)",
+  "Save group": "समूह सहेजें",
+  "Save route": "मार्ग सहेजें",
+  "Invite a saved group": "सहेजे गए समूह को आमंत्रित करें",
+  "Share group invite": "समूह का निमंत्रण साझा करें"
 }

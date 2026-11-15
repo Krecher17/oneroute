@@ -23,7 +23,7 @@ const $=id=>document.getElementById(id);
 const AUTH_KEY='oneroute-token';
 let authToken='';try{authToken=localStorage.getItem(AUTH_KEY)||sessionStorage.getItem(AUTH_KEY)||''}catch{}
 let authUser=null;
-const socket=io(config.serverUrl||undefined,{autoConnect:false,auth:cb=>cb({token:authToken})});
+const socket=io(config.serverUrl||undefined,{autoConnect:false,reconnection:true,reconnectionDelay:800,reconnectionDelayMax:12000,timeout:12000,auth:cb=>cb({token:authToken})});
 function authHeaders(){return authToken?{Authorization:'Bearer '+authToken}:{}}
 const COLORS={ok:'#42c786',behind:'#f2a23a',off:'#f05b57',offline:'#9ca3af',arrived:'#6aa8ff'};
 const LABEL={ok:'On route',behind:'Behind',off:'Off route',offline:'No signal',arrived:'Arrived',waiting:'Waiting for GPS'};
@@ -812,7 +812,7 @@ $('create').onclick=()=>{
   if(pending&&pending.typed&&!pending.chosen){setMsg(i18n.t('start.pick'));bridge.run('searchStart');return}
   const createWith=(start,job)=>{
     job.label('Building your route…');
-    socket.emit('create-trip',{name:name(),start,destination:chosen},res=>{job.stop();if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.')});
+    socket.emit('create-trip',{name:name(),start,destination:chosen},res=>{job.stop();if(res&&res.ok)openPlanner({...res,waypoints:savedWaypoints.splice(0)});else setMsg(res?.error||'Could not create trip.')});
   };
   setMsg('');
   // A chosen starting point needs no GPS at all; otherwise the trip starts from where the person is now.
@@ -916,6 +916,12 @@ socket.on('waypoints',waypoints=>{if(Array.isArray(waypoints)){plannedWaypoints=
 socket.on('route-updated',update=>{
   if(!update)return;
   pendingTrip={...pendingTrip,...update};
+  if(cachedRoute&&Array.isArray(update.route)&&update.route.length>=2){
+    cachedRoute=pendingTrip;
+    navRouteRequest++;navRequestPending=false;navRetryAt=0;
+    navRouteCoords=update.route;navRouteSteps=[];navTotals=null;navBuildCum();navDrawRoute();cacheActiveRoute();
+    void navFetchDirections();
+  }
   plannedWaypoints=Array.isArray(update.waypoints)?update.waypoints:plannedWaypoints;
   renderUpcomingWaypoints(plannedWaypoints);
   if(map&&Array.isArray(update.route)&&update.route.length){
@@ -926,11 +932,40 @@ socket.on('route-updated',update=>{
   }
 });
 
-function startApp(res){
+const activeRouteKey=()=> 'oneroute-active-route:'+authUser?.id;
+let cachedRoute=null;
+let savedWaypoints=[];
+function cacheActiveRoute(){
+  if(!cachedRoute)return;
+  try{
+    sessionStorage.setItem(activeRouteKey(),JSON.stringify({
+      ...cachedRoute, navigation:{coords:navRouteCoords,steps:navRouteSteps,totals:navTotals},
+    }));
+  }catch{}
+}
+let tripJoined=false;
+let pendingPosition=null;
+let positionInFlight=false;
+let reconnectTimer;
+function flushPosition(){
+  if(!tripJoined||!socket.connected||positionInFlight||!pendingPosition)return;
+  const point=pendingPosition;
+  const connection=socket.id;
+  positionInFlight=true;
+  socket.timeout(6000).emit('position',point,(error,result)=>{
+    positionInFlight=false;
+    if(socket.id!==connection){flushPosition();return;}
+    if(!error&&result?.ok&&pendingPosition===point)pendingPosition=null;
+    if(!error&&result?.ok&&pendingPosition)flushPosition();
+  });
+}
+setInterval(flushPosition,3000);
+
+function startApp(res, restored=false){
   window.scrollTo(0,0);setTimeout(()=>window.scrollTo(0,0),80);
   pendingTrip=res;mapWaitShow();startWeather();
   try{history.replaceState(null,'',location.pathname)}catch{}
-  session={code:res.code,name:name()};
+  session={code:res.code,name:name()};tripJoined=!restored&&socket.connected;pendingPosition=null;cachedRoute=res;
   // Bug fix (existing app): the planner was never hidden when the trip started, so it stayed stacked above the map.
   $('setup').hidden=true;$('planner').hidden=true;if(plannerMap){plannerMap.remove();plannerMap=null}$('app').hidden=false;$('nav').hidden=false;
   $('tripcode').textContent=$('summarycode').textContent=res.code||'----';
@@ -962,9 +997,10 @@ function startApp(res){
   });
   startSharing();showScreen('map');
   navRouteRequest++;navRequestPending=false;navRoutingUnavailable=false;navRetryAt=0;navRouteSteps=[];navStepIndex=0;
-  navRouteCoords=Array.isArray(res.route)?res.route:[];
-  navTotals=null;navBuildCum();navDrawRoute();
-  navTrip=true;navLastRouteAt=0;navFetchDirections(); // turn-by-turn runs for the whole trip, and shows a preview until GPS arrives
+  navRouteCoords=res.navigation?.coords??(Array.isArray(res.route)?res.route:[]);
+  navRouteSteps=res.navigation?.steps??[];
+  navTotals=res.navigation?.totals??null;navBuildCum();navDrawRoute();cacheActiveRoute();
+  navTrip=true;navLastRouteAt=0;if(restored)rejoinActiveTrip();else void saveTripLibrary('history',tripLibraryRoute(res));navFetchDirections(); // turn-by-turn runs for the whole trip, and shows a preview until GPS arrives
   Object.keys(sosMarkers).forEach(id=>{sosMarkers[id].remove();delete sosMarkers[id]});renderSos();
 }
 
@@ -1016,6 +1052,14 @@ function navUpdateMarkers(){
     let m=navMarkers[c.id];
     if(!m){const el=document.createElement('div');el.className='nav-mate';m=navMarkers[c.id]=new maplibregl.Marker({element:el}).setLngLat([Number(c.lon),Number(c.lat)]).addTo(navMap)}
     const el=m.getElement();el.textContent=String(c.name||'?').trim().charAt(0).toUpperCase();paintPin(el,c);
+    if(c.silentSec!=null&&Number.isFinite(Number(c.silentSec))){
+      const tag=document.createElement('span');
+      tag.className='seen-tag';
+      tag.dataset.lastSeen=String(Date.now()-Number(c.silentSec)*1000);
+      tag.textContent='Last seen '+agoText(Number(c.silentSec));
+      tag.hidden=c.status!=='offline'&&socket.connected;
+      el.append(tag);
+    }
     m.setLngLat([Number(c.lon),Number(c.lat)]);
   });
   Object.keys(navMarkers).forEach(id=>{if(!seen.has(id)){navMarkers[id].remove();delete navMarkers[id]}});
@@ -1189,7 +1233,7 @@ navRequestPending=true;
 if(!navRouteSteps.length&&!navRoutingUnavailable){
   $('navInstruction').textContent='Calculating directions…';
   $('navRoadName').textContent='Fetching driving route';
-}try{const start=`${origin.lon},${origin.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url,{signal:AbortSignal.timeout?.(10000)});if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navTotals={distance:Number(route.distance)||0,duration:Number(route.duration)||0};navBuildCum();navStepIndex=0;navLastRouteAt=Date.now();navRoutingUnavailable=false;navRetryAt=0;updateOfflineRoute();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){
+}try{const start=`${origin.lon},${origin.lat}`,end=`${Number(dest.lon)},${Number(dest.lat)}`;const url=`https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson&steps=true`;const response=await fetch(url,{signal:AbortSignal.timeout?.(10000)});if(!response.ok)throw new Error('Routing service unavailable');const data=await response.json();if(requestId!==navRouteRequest)return;if(data.code!=='Ok'||!data.routes?.length)throw new Error('No driving route found');const route=data.routes[0];navRouteCoords=route.geometry.coordinates;navRouteSteps=(route.legs||[]).flatMap(leg=>leg.steps||[]);navTotals={distance:Number(route.distance)||0,duration:Number(route.duration)||0};navBuildCum();navStepIndex=0;cacheActiveRoute();navLastRouteAt=Date.now();navRoutingUnavailable=false;navRetryAt=0;updateOfflineRoute();$('navRouteMeta').textContent=`${(route.distance/1000).toFixed(1)} km · ${Math.round(route.duration/60)} min estimated`;$('navNotice').textContent='Directions from OSRM; map and convoy positions are live. Use road signs and drive safely.';navDrawRoute();navUpdateInstruction();}catch(e){
   if(requestId!==navRouteRequest)return;
   navRoutingUnavailable=true;
   navRetryAt=Date.now()+30000;
@@ -1290,7 +1334,7 @@ function startSharing(){
     const speedMps=p.coords.speed;lastSpeedKmh=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):null;
     $('speedValue').textContent=Number.isFinite(speedMps)&&speedMps>=0?Math.round(speedMps*3.6):'--';
     if(fuelVisible&&Date.now()-lastFuelSearch>30000){lastFuelSearch=Date.now();loadFuelStations(lastGps.lat,lastGps.lon)}
-    socket.emit('position',{lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy,speed:p.coords.speed});
+    pendingPosition={lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy,speed:p.coords.speed,capturedAt:Date.now()};flushPosition();
   };
   watchId=geo.watchPosition(onPosition,e=>{gpsErrorCode=e.code;showBanner('<b>Location problem</b>'+esc(geoError(e)),'warn',8000)},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
   keepScreenOn();
@@ -1315,9 +1359,32 @@ $('recenter').onclick=()=>{
 $('stop').onclick=()=>{
   if(watchId!==null)geo.clearWatch(watchId);
   if(wakeLock)wakeLock.release().catch(()=>{});
+  try{sessionStorage.removeItem(activeRouteKey());}catch{}
   socket.disconnect();location.reload();
 };
-socket.on('connect',()=>{if(session)socket.emit('join-trip',session,()=>{})});
+function rejoinActiveTrip(){
+  if(!session||!socket.connected||tripJoined)return;
+  const connection=socket.id;
+  socket.timeout(7000).emit('join-trip',session,(error,result)=>{
+    if(!socket.connected||socket.id!==connection)return;
+    if(error){reconnectTimer=setTimeout(rejoinActiveTrip,3000);return;}
+    tripJoined=result?.ok===true;
+    if(tripJoined)flushPosition();
+    else showNotice('This trip is no longer online. You can still follow the saved route.','warn');
+  });
+}
+socket.on('connect',rejoinActiveTrip);
+socket.on('disconnect',()=>{tripJoined=false;clearTimeout(reconnectTimer);});
+window.addEventListener('online',()=>{if(authToken&&!socket.connected)socket.connect();});
+function updateLastSeen(){
+  for(const el of document.querySelectorAll('[data-last-seen]')){
+    const age=Math.max(0,Math.floor((Date.now()-Number(el.dataset.lastSeen))/1000));
+    el.hidden=age<30&&socket.connected;
+    const text='Last seen '+agoText(age);
+    if(el.textContent!==text)el.textContent=text;
+  }
+}
+setInterval(updateLastSeen,1000);
 
 socket.on('cars',cars=>{
   if(!Array.isArray(cars))return;
@@ -1354,7 +1421,7 @@ socket.on('cars',cars=>{
       pinEl.classList.toggle('halted',!!halts[c.id]);
       const stale=c.status==='offline';pinEl.classList.toggle('stale',stale);
       let seenTag=pinEl.querySelector('.seen-tag');
-      if(stale&&Number.isFinite(Number(c.silentSec))){if(!seenTag){seenTag=document.createElement('span');seenTag.className='seen-tag';pinEl.appendChild(seenTag)}seenTag.textContent='no signal · '+agoText(Number(c.silentSec))}
+      if(c.silentSec!=null&&Number.isFinite(Number(c.silentSec))){if(!seenTag){seenTag=document.createElement('span');seenTag.className='seen-tag';pinEl.appendChild(seenTag)}seenTag.dataset.lastSeen=String(Date.now()-Number(c.silentSec)*1000);seenTag.hidden=!stale&&socket.connected;seenTag.textContent='Last seen '+agoText(Number(c.silentSec))}
       else if(seenTag)seenTag.remove();
       bounds.extend([c.lon,c.lat]);
     }
@@ -1893,8 +1960,75 @@ function storeToken(token,remember){
   try{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY);(remember?localStorage:sessionStorage).setItem(AUTH_KEY,token)}catch{}
 }
 function clearToken(){authToken='';try{localStorage.removeItem(AUTH_KEY);sessionStorage.removeItem(AUTH_KEY)}catch{}}
+function tripLibraryRoute(trip){
+  const [lon,lat]=trip.route?.[0]??[];
+  return {name:trip.destination?.label||'Trip',start:{lat,lon},destination:trip.destination,waypoints:trip.waypoints};
+}
+function renderTripLibrary(library){
+  const list=$('tripLibraryList');
+  list.replaceChildren();
+  const groupSelect=$('inviteGroup');
+  groupSelect.replaceChildren(new Option('Choose a saved group',''));
+  for(const group of library.groups??[])groupSelect.add(new Option(group.name,group.name));
+  for(const [kind,title] of [['routes','Saved routes'],['history','Recent trips'],['groups','Recurring groups']]){
+    const heading=document.createElement('h3');
+    heading.textContent=title;
+    list.append(heading);
+    for(const item of library[kind]??[]){
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='secondary';
+      button.textContent=item.name;
+      button.onclick=()=>{
+        if(kind==='groups'){
+          $('groupName').value=item.name;
+          $('groupMembers').value=item.members.join(', ');
+          return;
+        }
+        savedWaypoints=item.waypoints??[];
+        chosen=item.destination;
+        chosenStart=item.start;
+        $('dest').value=chosen.label||item.name;
+        $('chosenDest').textContent=chosen.label||item.name;
+        $('chosenDest').hidden=false;
+        $('create').focus();
+      };
+      list.append(button);
+    }
+  }
+}
+async function saveTripLibrary(kind,body){
+  try{
+    const response=await fetch('/api/trip-library/'+kind,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!response.ok)throw new Error('Save failed');
+    renderTripLibrary(await response.json());
+    $('tripLibraryStatus').textContent='Saved to your account.';
+  }catch{$('tripLibraryStatus').textContent='Could not save. Check your connection.';}
+}
+$('shareGroupInvite').onclick=async()=>{
+  if(!session||!$('inviteGroup').value)return;
+  const message=$('inviteGroup').value+': '+inviteText(session.code);
+  try{
+    if(navigator.share)await navigator.share({text:message});
+    else{await navigator.clipboard.writeText(message);$('saveActiveRouteStatus').textContent='Invite copied.';}
+  }catch(error){
+    if(error.name!=='AbortError')$('saveActiveRouteStatus').textContent='Could not share the invite.';
+  }
+};
+$('saveRecurringGroup').onclick=()=>void saveTripLibrary('groups',{name:$('groupName').value,members:$('groupMembers').value});
+$('saveActiveRoute').onclick=()=>{if(pendingTrip)void saveTripLibrary('routes',tripLibraryRoute(pendingTrip)).then(()=>{$('saveActiveRouteStatus').textContent=$('tripLibraryStatus').textContent;});};
 function enterApp(user){
-  authUser=user;$('setup').hidden=false;
+  authUser=user;
+  fetch('/api/trip-library',{headers:authHeaders()}).then(r=>r.ok?r.json():{}).then(renderTripLibrary).catch(()=>{});
+  try{
+    const cached=JSON.parse(sessionStorage.getItem(activeRouteKey())||'null');
+    if(cached?.route?.length>=2){
+      const resume=$('resumeCachedRoute');
+      resume.hidden=false;
+      resume.onclick=()=>startApp(cached,true);
+    }
+  }catch{}
+$('setup').hidden=false;
   $('acctName').textContent=user.name;renderAccountPhoto();photoMessage('');syncDeleteUi(user);
   if(!$('name').value.trim())$('name').value=user.name;
   if(!socket.connected)socket.connect();

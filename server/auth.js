@@ -378,6 +378,42 @@ export function registerAuthRoutes(app, hooks = {}) {
     }
   });
 
+  app.get('/api/trip-library', requireAuth, (req, res) => {
+    res.set('Cache-Control', 'no-store').json(db.users[req.user.id]?.tripLibrary ?? {});
+  });
+
+  app.post('/api/trip-library/:kind', requireAuth, async (req, res) => {
+    const kind = req.params.kind;
+    if (!['history', 'routes', 'groups'].includes(kind)) return res.sendStatus(404);
+    const user = db.users[req.user.id];
+    if (!user) return res.sendStatus(401);
+    const library = user.tripLibrary ??= {};
+    const name = String(req.body?.name || '').trim().slice(0, 80);
+    if (!name) return res.sendStatus(400);
+    const items = library[kind] ??= [];
+    if (kind === 'groups') {
+      const members = String(req.body?.members || '').split(',').map(member => member.trim().slice(0, 80)).filter(Boolean).slice(0, 30);
+      items.unshift({ name, members });
+    } else {
+      const point = (value) => {
+        if (!Number.isFinite(value?.lat) || Math.abs(value.lat)>90 || !Number.isFinite(value?.lon) || Math.abs(value.lon)>180) return null;
+        return { lat:value.lat, lon:value.lon, label:String(value.label || '').slice(0, 160) };
+      };
+      const start = point(req.body?.start);
+      const destination = point(req.body?.destination);
+      if (!start || !destination) return res.sendStatus(400);
+      const waypoints = (Array.isArray(req.body.waypoints) ? req.body.waypoints : []).slice(0, 10).map(point).filter(Boolean);
+      items.unshift({ name, start, destination, waypoints, at:Date.now() });
+    }
+    if (kind !== 'history') {
+      const duplicate = items.findIndex((item,index) => index > 0 && item.name === name);
+      if (duplicate >= 0) items.splice(duplicate, 1);
+    }
+    items.length = Math.min(30, items.length);
+    await saveDb();
+    res.json(library);
+  });
+
   // ── /api/avatar  (PUT: upload) ──
   const rawJpeg = (req, res, next) =>
     express.raw({ type: 'image/jpeg', limit: MAX_AVATAR_BYTES })(req, res, (err) => {

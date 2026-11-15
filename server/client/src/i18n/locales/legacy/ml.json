@@ -250,5 +250,14 @@
 "Location permission denied. Allow location in browser settings.": "ലൊക്കേഷൻ അനുമതി നിഷേധിച്ചു. ബ്രൗസർ ക്രമീകരണത്തിൽ ലൊക്കേഷൻ അനുവദിക്കുക.",
 "Could not get GPS. Try outside with GPS enabled.": "GPS ലഭിച്ചില്ല. GPS ഓണാക്കി പുറത്ത് തുറസ്സായ സ്ഥലത്ത് ശ്രമിക്കുക.",
 "Location timed out. Please try again.": "ലൊക്കേഷൻ കിട്ടാൻ വൈകി. വീണ്ടും ശ്രമിക്കുക.",
-"Still looking for GPS. Make sure location is allowed for this site.": "ഇപ്പോഴും GPS തിരയുന്നു. ഈ സൈറ്റിന് ലൊക്കേഷൻ അനുമതി ഉണ്ടെന്ന് ഉറപ്പാക്കുക."
+"Still looking for GPS. Make sure location is allowed for this site.": "ഇപ്പോഴും GPS തിരയുന്നു. ഈ സൈറ്റിന് ലൊക്കേഷൻ അനുമതി ഉണ്ടെന്ന് ഉറപ്പാക്കുക.",
+  "Trips and groups": "യാത്രകളും ഗ്രൂപ്പുകളും",
+  "Resume last route": "അവസാന വഴി തുടരുക",
+  "Group name": "ഗ്രൂപ്പിന്റെ പേര്",
+  "Family or college friends": "കുടുംബം അല്ലെങ്കിൽ കോളേജ് സുഹൃത്തുകൾ",
+  "Members (comma separated)": "അംഗങ്ങൾ (കോമ ഉപയോഗിച്ച് വേർതിരിക്കുക)",
+  "Save group": "ഗ്രൂപ്പ് സംരക്ഷിക്കുക",
+  "Save route": "വഴി സംരക്ഷിക്കുക",
+  "Invite a saved group": "സംരക്ഷിച്ച ഗ്രൂപ്പിനെ ക്ഷണിക്കുക",
+  "Share group invite": "ഗ്രൂപ്പ് ക്ഷണം പങ്കിടുക"
 }
