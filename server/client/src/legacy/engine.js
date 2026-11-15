@@ -812,7 +812,7 @@ $('create').onclick=()=>{
   if(pending&&pending.typed&&!pending.chosen){setMsg(i18n.t('start.pick'));bridge.run('searchStart');return}
   const createWith=(start,job)=>{
     job.label('Building your route…');
-    socket.emit('create-trip',{name:name(),start,destination:chosen},res=>{job.stop();if(res&&res.ok)openPlanner({...res,waypoints:savedWaypoints.splice(0)});else setMsg(res?.error||'Could not create trip.')});
+    socket.emit('create-trip',{name:name(),start,destination:chosen},res=>{job.stop();if(res&&res.ok)openPlanner(res);else setMsg(res?.error||'Could not create trip.')});
   };
   setMsg('');
   // A chosen starting point needs no GPS at all; otherwise the trip starts from where the person is now.
@@ -934,7 +934,6 @@ socket.on('route-updated',update=>{
 
 const activeRouteKey=()=> 'oneroute-active-route:'+authUser?.id;
 let cachedRoute=null;
-let savedWaypoints=[];
 function cacheActiveRoute(){
   if(!cachedRoute)return;
   try{
@@ -981,6 +980,9 @@ function startApp(res, restored=false){
     style:null
   });
   map.addControl(new maplibregl.NavigationControl(),'top-right');
+  const trafficControl=map.getContainer().querySelector('.traffic-control');
+  if(trafficControl)$('mapTrafficSlot').replaceChildren(trafficControl);
+  setMapToolsOpen(false);
   map.on('load',()=>{
     applySat(map);
     if(res.route?.length){
@@ -1270,7 +1272,19 @@ async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start 
   // The screen is still sizing itself when it opens, and resizing can drop a camera move made a moment earlier, so (re)apply the camera after each resize.
   [100,700].forEach(ms=>setTimeout(()=>{navMap?.resize();if(navOpen&&lastGps&&navFollow)navFollowCamera(true)},ms));$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||(Date.now()-navLastRouteAt>120000&&navMatchPosition()?.offset>80))await navFetchDirections();else navUpdateInstruction();navCameraInit=false;navFollow=true;if(navRecenterBtn)navRecenterBtn.hidden=true;navUpdateMarkers();if(lastGps&&navMap)navCameraInit=navFollowCamera(true)}
 function closeNavigation(){try{$('openNavigation').focus()}catch{}navOpen=false;$('navigationScreen').hidden=true;document.body.style.overflow='';if(navMap&&map){setTimeout(()=>navMap.resize(),80)}}
-$('openNavigation').onclick=openNavigation;
+function setMapToolsOpen(open){
+  $('mapToolsToggle').setAttribute('aria-expanded',String(open));
+  $('mapToolsPanel').hidden=!open;
+  if(!open)$('closeQuickStop').click();
+}
+$('mapToolsToggle').onclick=()=>setMapToolsOpen($('mapToolsPanel').hidden);
+$('mapToolsPanel').addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||event.defaultPrevented)return;
+  event.preventDefault();
+  setMapToolsOpen(false);
+  $('mapToolsToggle').focus();
+});
+$('openNavigation').onclick=()=>{setMapToolsOpen(false);void openNavigation();};
 $('openNavigation').addEventListener('click',()=>{setTimeout(()=>{if(navOpen)$('closeNavigation').focus()},150);[300,1200,2500].forEach(ms=>setTimeout(()=>applySat(navMap),ms))});$('closeNavigation').onclick=closeNavigation;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&navOpen)closeNavigation();});
 window.addEventListener('resize',()=>{if(navOpen&&navMap)setTimeout(()=>navMap.resize(),80)});
@@ -1965,45 +1979,18 @@ function tripLibraryRoute(trip){
   return {name:trip.destination?.label||'Trip',start:{lat,lon},destination:trip.destination,waypoints:trip.waypoints};
 }
 function renderTripLibrary(library){
-  const list=$('tripLibraryList');
-  list.replaceChildren();
   const groupSelect=$('inviteGroup');
   groupSelect.replaceChildren(new Option('Choose a saved group',''));
   for(const group of library.groups??[])groupSelect.add(new Option(group.name,group.name));
-  for(const [kind,title] of [['routes','Saved routes'],['history','Recent trips'],['groups','Recurring groups']]){
-    const heading=document.createElement('h3');
-    heading.textContent=title;
-    list.append(heading);
-    for(const item of library[kind]??[]){
-      const button=document.createElement('button');
-      button.type='button';
-      button.className='secondary';
-      button.textContent=item.name;
-      button.onclick=()=>{
-        if(kind==='groups'){
-          $('groupName').value=item.name;
-          $('groupMembers').value=item.members.join(', ');
-          return;
-        }
-        savedWaypoints=item.waypoints??[];
-        chosen=item.destination;
-        chosenStart=item.start;
-        $('dest').value=chosen.label||item.name;
-        $('chosenDest').textContent=chosen.label||item.name;
-        $('chosenDest').hidden=false;
-        $('create').focus();
-      };
-      list.append(button);
-    }
-  }
+
 }
 async function saveTripLibrary(kind,body){
   try{
     const response=await fetch('/api/trip-library/'+kind,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!response.ok)throw new Error('Save failed');
     renderTripLibrary(await response.json());
-    $('tripLibraryStatus').textContent='Saved to your account.';
-  }catch{$('tripLibraryStatus').textContent='Could not save. Check your connection.';}
+    if(kind==='routes')$('saveActiveRouteStatus').textContent='Saved to your account.';
+  }catch{if(kind==='routes')$('saveActiveRouteStatus').textContent='Could not save. Check your connection.';}
 }
 $('shareGroupInvite').onclick=async()=>{
   if(!session||!$('inviteGroup').value)return;
@@ -2015,8 +2002,7 @@ $('shareGroupInvite').onclick=async()=>{
     if(error.name!=='AbortError')$('saveActiveRouteStatus').textContent='Could not share the invite.';
   }
 };
-$('saveRecurringGroup').onclick=()=>void saveTripLibrary('groups',{name:$('groupName').value,members:$('groupMembers').value});
-$('saveActiveRoute').onclick=()=>{if(pendingTrip)void saveTripLibrary('routes',tripLibraryRoute(pendingTrip)).then(()=>{$('saveActiveRouteStatus').textContent=$('tripLibraryStatus').textContent;});};
+$('saveActiveRoute').onclick=()=>{if(pendingTrip)void saveTripLibrary('routes',tripLibraryRoute(pendingTrip));};
 function enterApp(user){
   authUser=user;
   fetch('/api/trip-library',{headers:authHeaders()}).then(r=>r.ok?r.json():{}).then(renderTripLibrary).catch(()=>{});

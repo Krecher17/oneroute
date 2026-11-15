@@ -285,3 +285,33 @@
 @media (prefers-reduced-motion: no-preference) {
   .trip-tutorial-page { animation: form-content-enter 180ms ease-out; }
 }
+
+.map-tools:has(.map-tools-panel) {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: end;
+  align-items: stretch;
+}
+.map-tools #mapToolsToggle { min-height: 48px; padding-inline: 14px; font-size: 13px; }
+.map-tools-panel:not([hidden]) {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(340px, calc(100vw - 42px));
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px #0006;
+}
+.map-tools-panel button { min-height: 40px; }
+.map-tools-panel .traffic-control { margin: 0; }
+.map-tools-panel .quick-stop-menu { position: static; grid-column: 1 / -1; width: auto; }
+.map-wrap:has(#mapToolsPanel[hidden]) #map .maplibregl-ctrl-top-right {
+  visibility: hidden;
+}

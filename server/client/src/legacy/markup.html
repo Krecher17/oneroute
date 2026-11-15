@@ -59,17 +59,7 @@
     <input id="code" maxlength="4" placeholder="4-letter trip code" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;letter-spacing:4px">
     <button id="join" class="full secondary">Join trip →</button>
   </div>
-  <section id="tripLibrary" class="card">
-    <h2>Trips and groups</h2>
-    <button type="button" id="resumeCachedRoute" hidden>Resume last route</button>
-    <div id="tripLibraryList"></div>
-    <label class="field-label" for="groupName">Group name</label>
-    <input id="groupName" maxlength="80" placeholder="Family or college friends">
-    <label class="field-label" for="groupMembers">Members (comma separated)</label>
-    <input id="groupMembers" maxlength="1200">
-    <button type="button" id="saveRecurringGroup">Save group</button>
-    <p id="tripLibraryStatus" role="status"></p>
-  </section>
+  <button type="button" id="resumeCachedRoute" class="secondary" hidden>Resume last route</button>
   <div id="msg" role="status"></div>
   <p class="subtitle">Your location is shared with your trip participants while sharing is active. Only join trips with people you trust.</p>
   <footer class="legal-footer" aria-label="Legal information">
@@ -111,25 +101,29 @@
         <div class="speed-bubble" aria-live="polite"><strong id="speedValue">--</strong><small>km/h</small></div>
         <div class="map-tools">
           <button id="openNavigation">➤ Navigation</button>
-          <button id="recenter">⌖ Recenter</button>
-          <button id="follow">Follow: ON</button>
-          <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
-          <button id="pinToggle" aria-expanded="false">📍 Drop pin</button>
-          <button id="styleToggle" aria-pressed="false">🛰 Satellite</button>
-          <button id="headingToggle" aria-pressed="false">🧭 Heading up: OFF</button>
-          <button id="helpOpen" hidden>🆘 Help nearby</button>
-          <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
-          <button id="haltToggle">⏸ I'm stopping</button>
-          <button id="sosButton">🆘 SOS</button>
-          <button id="alertsToggle">🔊 Alerts: ON</button>
-          <button id="navVoiceToggle" aria-pressed="true">🧭 Voice guidance: ON</button>
-        </div>
-        <div id="quickStopMenu" class="quick-stop-menu" hidden>
-          <h3>Add a stop to your convoy route</h3>
-          <button data-stop-query="Fuel station">⛽ Fuel station</button>
-          <button data-stop-query="Restaurant">🍽️ Restaurant</button>
-          <button data-stop-query="Rest area">🛏️ Rest area</button>
-          <button id="closeQuickStop" class="close-stop">Cancel</button>
+          <button type="button" id="mapToolsToggle" aria-expanded="false" aria-controls="mapToolsPanel">Map tools</button>
+          <div id="mapToolsPanel" class="map-tools-panel" hidden>
+            <button id="recenter">⌖ Recenter</button>
+            <button id="follow">Follow: ON</button>
+            <button id="fuelToggle" aria-pressed="false">⛽ Fuel stations</button>
+            <button id="pinToggle" aria-expanded="false">📍 Drop pin</button>
+            <button id="styleToggle" aria-pressed="false">🛰 Satellite</button>
+            <button id="headingToggle" aria-pressed="false">🧭 Heading up: OFF</button>
+            <button id="helpOpen" hidden>🆘 Help nearby</button>
+            <button id="quickStopToggle" aria-expanded="false">＋ Quick stop</button>
+            <button id="haltToggle">⏸ I'm stopping</button>
+            <button id="sosButton">🆘 SOS</button>
+            <button id="alertsToggle">🔊 Alerts: ON</button>
+            <button id="navVoiceToggle" aria-pressed="true">🧭 Voice guidance: ON</button>
+            <div id="mapTrafficSlot"></div>
+            <div id="quickStopMenu" class="quick-stop-menu" hidden>
+              <h3>Add a stop to your convoy route</h3>
+              <button data-stop-query="Fuel station">⛽ Fuel station</button>
+              <button data-stop-query="Restaurant">🍽️ Restaurant</button>
+              <button data-stop-query="Rest area">🛏️ Rest area</button>
+              <button id="closeQuickStop" class="close-stop">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="metrics">
