@@ -1978,34 +1978,16 @@ function tripLibraryRoute(trip){
   const [lon,lat]=trip.route?.[0]??[];
   return {name:trip.destination?.label||'Trip',start:{lat,lon},destination:trip.destination,waypoints:trip.waypoints};
 }
-function renderTripLibrary(library){
-  const groupSelect=$('inviteGroup');
-  groupSelect.replaceChildren(new Option('Choose a saved group',''));
-  for(const group of library.groups??[])groupSelect.add(new Option(group.name,group.name));
-
-}
 async function saveTripLibrary(kind,body){
   try{
     const response=await fetch('/api/trip-library/'+kind,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!response.ok)throw new Error('Save failed');
-    renderTripLibrary(await response.json());
     if(kind==='routes')$('saveActiveRouteStatus').textContent='Saved to your account.';
   }catch{if(kind==='routes')$('saveActiveRouteStatus').textContent='Could not save. Check your connection.';}
 }
-$('shareGroupInvite').onclick=async()=>{
-  if(!session||!$('inviteGroup').value)return;
-  const message=$('inviteGroup').value+': '+inviteText(session.code);
-  try{
-    if(navigator.share)await navigator.share({text:message});
-    else{await navigator.clipboard.writeText(message);$('saveActiveRouteStatus').textContent='Invite copied.';}
-  }catch(error){
-    if(error.name!=='AbortError')$('saveActiveRouteStatus').textContent='Could not share the invite.';
-  }
-};
 $('saveActiveRoute').onclick=()=>{if(pendingTrip)void saveTripLibrary('routes',tripLibraryRoute(pendingTrip));};
 function enterApp(user){
   authUser=user;
-  fetch('/api/trip-library',{headers:authHeaders()}).then(r=>r.ok?r.json():{}).then(renderTripLibrary).catch(()=>{});
   try{
     const cached=JSON.parse(sessionStorage.getItem(activeRouteKey())||'null');
     if(cached?.route?.length>=2){
