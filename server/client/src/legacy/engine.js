@@ -833,6 +833,7 @@ $('join').onclick=()=>{
 
 
 function openPlanner(res){
+  rememberBackDestination();
   window.scrollTo(0,0);setTimeout(()=>window.scrollTo(0,0),80);
   pendingTrip=res;plannedWaypoints=Array.isArray(res.waypoints)?res.waypoints.slice():[];$('setup').hidden=true;$('app').hidden=true;$('nav').hidden=true;$('planner').hidden=false;
   $('plannerDestination').textContent=res.destination?.label||'Selected destination';$('plannerMessage').textContent='Search for a place and add it to your route.';$('waypointResults').replaceChildren();
@@ -963,7 +964,7 @@ setInterval(flushPosition,3000);
 function startApp(res, restored=false){
   window.scrollTo(0,0);setTimeout(()=>window.scrollTo(0,0),80);
   pendingTrip=res;mapWaitShow();startWeather();
-  try{history.replaceState(null,'',location.pathname)}catch{}
+  try{history.replaceState(history.state,'',location.pathname)}catch{}
   session={code:res.code,name:name()};tripJoined=!restored&&socket.connected;pendingPosition=null;cachedRoute=res;
   // Bug fix (existing app): the planner was never hidden when the trip started, so it stayed stacked above the map.
   $('setup').hidden=true;$('planner').hidden=true;if(plannerMap){plannerMap.remove();plannerMap=null}$('app').hidden=false;$('nav').hidden=false;
@@ -1268,7 +1269,7 @@ const step=navRouteSteps[Math.min(navStepIndex,navRouteSteps.length-1)],maneuver
 const upcoming=navRouteSteps.slice(navStepIndex+1,navStepIndex+5);$('navStepsCount').textContent=`${upcoming.length} after this`; $('navNextSteps').innerHTML=upcoming.map((st,i)=>`<div class="nav-step-chip"><b>${navManeuverIcon(st.maneuver?.type,st.maneuver?.modifier)}</b>${navManeuverText(st)}${st.name?' · '+esc(st.name):''}<br><span style="color:#9ca3af">${navFormatDistance(st.distance)}</span></div>`).join('')||'<div class="nav-step-chip">Final maneuver</div>';}
 function navStepsCountExists(){return !!$('navStepsCount');}
 function navRenderCars(){if(!navOpen)return;$('navLiveCount').textContent=`${navCars.length} vehicle${navCars.length===1?'':'s'}`;$('navConvoy').innerHTML=navCars.map(c=>{const status=c.status||'offline',color=COLORS[status]||COLORS.offline,isMe=c.id===socket.id;return `<button class="nav-person ${isMe?'me':''}" data-nav-car="${esc(c.id)}">${miniAvatarHtml(c,color)}<span><b>${esc(c.name||'Driver')}${isMe?' (you)':''}</b><small>${esc(LABEL[status]||status)}${Number.isFinite(Number(c.gapKm))&&Number(c.gapKm)>0?' · '+Number(c.gapKm).toFixed(1)+' km back':''}</small></span></button>`}).join('')||'<div class="nav-step-chip">Waiting for convoy positions…</div>';document.querySelectorAll('[data-nav-car]').forEach(b=>b.onclick=()=>{const c=navCars.find(x=>String(x.id)===b.dataset.navCar);if(c&&Number.isFinite(Number(c.lon))&&Number.isFinite(Number(c.lat))&&navMap)navMap.flyTo({center:[Number(c.lon),Number(c.lat)],zoom:16,duration:700});});navUpdateMarkers();}
-async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();navMap.resize();navDrawRoute();updateOfflineRoute();
+async function openNavigation(){if(!session||!pendingTrip){showBanner('<b>Start or join a convoy first</b>Select a destination and start your trip to use navigation.','warn',5000);return;}rememberBackDestination();navOpen=true;$('navigationScreen').hidden=false;document.body.style.overflow='hidden';navEnsureMap();navMap.resize();navDrawRoute();updateOfflineRoute();
   // The screen is still sizing itself when it opens, and resizing can drop a camera move made a moment earlier, so (re)apply the camera after each resize.
   [100,700].forEach(ms=>setTimeout(()=>{navMap?.resize();if(navOpen&&lastGps&&navFollow)navFollowCamera(true)},ms));$('navDestination').textContent=pendingTrip.destination?.label||'Selected destination';navRenderCars();if(navRouteCoords.length)navUpdateInstruction();if(!navRouteSteps.length||(Date.now()-navLastRouteAt>120000&&navMatchPosition()?.offset>80))await navFetchDirections();else navUpdateInstruction();navCameraInit=false;navFollow=true;if(navRecenterBtn)navRecenterBtn.hidden=true;navUpdateMarkers();if(lastGps&&navMap)navCameraInit=navFollowCamera(true)}
 function closeNavigation(){try{$('openNavigation').focus()}catch{}navOpen=false;$('navigationScreen').hidden=true;document.body.style.overflow='';if(navMap&&map){setTimeout(()=>navMap.resize(),80)}}
@@ -1285,7 +1286,7 @@ $('mapToolsPanel').addEventListener('keydown',event=>{
   $('mapToolsToggle').focus();
 });
 $('openNavigation').onclick=()=>{setMapToolsOpen(false);void openNavigation();};
-$('openNavigation').addEventListener('click',()=>{setTimeout(()=>{if(navOpen)$('closeNavigation').focus()},150);[300,1200,2500].forEach(ms=>setTimeout(()=>applySat(navMap),ms))});$('closeNavigation').onclick=closeNavigation;
+$('openNavigation').addEventListener('click',()=>{setTimeout(()=>{if(navOpen)$('closeNavigation').focus()},150);[300,1200,2500].forEach(ms=>setTimeout(()=>applySat(navMap),ms))});$('closeNavigation').onclick=()=>{closeNavigation();if(session)showScreen('map');};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&navOpen)closeNavigation();});
 window.addEventListener('resize',()=>{if(navOpen&&navMap)setTimeout(()=>navMap.resize(),80)});
 
@@ -1356,7 +1357,24 @@ function startSharing(){
 async function keepScreenOn(){try{if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen')}catch{}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session)keepScreenOn()});
 
+function rememberBackDestination(){
+  if(history.state?.onerouteBack)return;
+  history.pushState({...history.state,onerouteBack:true},'',location.href);
+}
+window.addEventListener('popstate',()=>{
+  if(!authUser||history.state?.onerouteBack)return;
+  if(navOpen)closeNavigation();
+  if(session){
+    closeSheets();
+    setMapToolsOpen(false);
+    showScreen('map');
+  }else if(!$('planner').hidden){
+    $('backToSetup').click();
+  }
+});
+
 function showScreen(which){
+  if(session&&which!=='map')rememberBackDestination();
   window.scrollTo(0,0);bridge.emit('screen',which);
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id==='screen-'+which));
   document.querySelectorAll('.nav-btn').forEach(b=>{const on=b.dataset.screen===which;b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
